@@ -7,7 +7,7 @@ toolchain go1.23.7
 require (
 	github.com/TBXark/confstore v0.0.4
 	github.com/TBXark/optional-go v0.0.1
-	github.com/mark3labs/mcp-go v0.25.0
+	github.com/mark3labs/mcp-go v0.24.1
 	golang.org/x/sync v0.13.0
 )
 
