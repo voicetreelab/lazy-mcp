@@ -300,7 +300,7 @@ func newMCPServer(name, version, baseURL string, clientConfig *MCPClientConfigV2
 		serverOpts...,
 	)
 	sseServer := server.NewSSEServer(mcpServer,
-		server.WithBasePath(name),
+		server.WithStaticBasePath(name),
 		server.WithBaseURL(baseURL),
 	)
 
