@@ -120,7 +120,13 @@ func startHTTPServer(config *Config) error {
 			if len(clientConfig.Options.AuthTokens) > 0 {
 				middlewares = append(middlewares, newAuthMiddleware(clientConfig.Options.AuthTokens))
 			}
-			mcpRoute := path.Join(baseURL.Path, name) + "/"
+			mcpRoute := path.Join(baseURL.Path, name)
+			if !strings.HasPrefix(mcpRoute, "/") {
+				mcpRoute = "/" + mcpRoute
+			}
+			if !strings.HasSuffix(mcpRoute, "/") {
+				mcpRoute += "/"
+			}
 			httpMux.Handle(mcpRoute, chainMiddleware(server.sseServer, middlewares...))
 			httpServer.RegisterOnShutdown(func() {
 				log.Printf("<%s> Shutting down", name)
