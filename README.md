@@ -5,7 +5,7 @@ An MCP proxy server that aggregates and serves multiple MCP resource servers thr
 ## Features
 
 - **Proxy Multiple MCP Clients**: Connects to multiple MCP resource servers and aggregates their tools and capabilities.
-- **SSE Support**: Provides an SSE (Server-Sent Events) server for real-time updates.
+- **SSE / HTTP Streaming MCPSupport**: Provides an SSE (Server-Sent Events) or HTTP streaming interface for real-time updates from MCP clients.
 - **Flexible Configuration**: Supports multiple client types (`stdio`, `sse` or `streamable-http`) with customizable settings.
 
 ## Installation
@@ -48,6 +48,7 @@ The server is configured using a JSON file. Below is an example configuration:
     "addr": ":9090",
     "name": "MCP Proxy",
     "version": "1.0.0",
+    "type": "streamable-http",// The transport type of the MCP proxy server, can be `streamable-http`, `sse`. By default, it is `sse`.
     "options": {
       "panicIfInvalid": false,
       "logEnabled": true,
@@ -116,6 +117,9 @@ Proxy HTTP server configuration
 - `addr`: The address the server listens on.
 - `name`: The name of the server.
 - `version`: The version of the server.
+- `type`: The transport type of the MCP proxy server. Can be `streamable-http` or `sse`. By default, it is `sse`.
+  - `streamable-http`: The MCP proxy server supports HTTP streaming.
+  - `sse`: The MCP proxy server supports Server-Sent Events (SSE).
 - `options`: Default options for the `mcpServers`.
 
 ### **`mcpServers`**
@@ -153,8 +157,9 @@ Usage of mcp-proxy:
         print version and exit
 ```
 1. The server will start and aggregate the tools and capabilities of the configured MCP clients.
-2. You can access the server at `http(s)://{baseURL}/{clientName}/sse`. (e.g., `https://mcp.example.com/fetch/sse`, based on the example configuration)
-3. If your MCP client does not support custom request headers., you can change the key in `clients` such as `fetch` to `fetch/{authToken}`, and then access it via `fetch/{authToken}`.
+2. When MCP Server type is `sse`, You can access the server at `http(s)://{baseURL}/{clientName}/sse`. (e.g., `https://mcp.example.com/fetch/sse`, based on the example configuration)
+3. When MCP Server type is `streamable-http`, You can access the server at `http(s)://{baseURL}/{clientName}/mcp`. (e.g., `https://mcp.example.com/fetch/mcp`, based on the example configuration)
+4. If your MCP client does not support custom request headers., you can change the key in `clients` such as `fetch` to `fetch/{authToken}`, and then access it via `fetch/{authToken}`.
 
 ## Thanks
 
