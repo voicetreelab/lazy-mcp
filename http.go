@@ -75,9 +75,9 @@ func recoverMiddleware(prefix string) MiddlewareFunc {
 
 func startHTTPServer(config *Config) error {
 
-	baseURL, err := url.Parse(config.McpProxy.BaseURL)
-	if err != nil {
-		return err
+	baseURL, uErr := url.Parse(config.McpProxy.BaseURL)
+	if uErr != nil {
+		return uErr
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -97,9 +97,12 @@ func startHTTPServer(config *Config) error {
 	for name, clientConfig := range config.McpServers {
 		mcpClient, err := newMCPClient(name, clientConfig)
 		if err != nil {
-			log.Fatalf("<%s> Failed to create client: %v", name, err)
+			return err
 		}
-		server := newMCPServer(name, config.McpProxy.Version, config.McpProxy.BaseURL, clientConfig)
+		server, err := newMCPServer(name, config.McpProxy, clientConfig)
+		if err != nil {
+			return err
+		}
 		errorGroup.Go(func() error {
 			log.Printf("<%s> Connecting", name)
 			addErr := mcpClient.addToMCPServer(ctx, info, server.mcpServer)
@@ -127,7 +130,7 @@ func startHTTPServer(config *Config) error {
 			if !strings.HasSuffix(mcpRoute, "/") {
 				mcpRoute += "/"
 			}
-			httpMux.Handle(mcpRoute, chainMiddleware(server.sseServer, middlewares...))
+			httpMux.Handle(mcpRoute, chainMiddleware(server.handler, middlewares...))
 			httpServer.RegisterOnShutdown(func() {
 				log.Printf("<%s> Shutting down", name)
 				_ = mcpClient.Close()
@@ -162,7 +165,7 @@ func startHTTPServer(config *Config) error {
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer shutdownCancel()
 
-	err = httpServer.Shutdown(shutdownCtx)
+	err := httpServer.Shutdown(shutdownCtx)
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
