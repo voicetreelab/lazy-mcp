@@ -90,8 +90,7 @@ func startHTTPServer(config *Config) error {
 		Handler: httpMux,
 	}
 	info := mcp.Implementation{
-		Name:    config.McpProxy.Name,
-		Version: config.McpProxy.Version,
+		Name: config.McpProxy.Name,
 	}
 
 	for name, clientConfig := range config.McpServers {
@@ -130,6 +129,7 @@ func startHTTPServer(config *Config) error {
 			if !strings.HasSuffix(mcpRoute, "/") {
 				mcpRoute += "/"
 			}
+			log.Printf("<%s> Handling requests at %s", name, mcpRoute)
 			httpMux.Handle(mcpRoute, chainMiddleware(server.handler, middlewares...))
 			httpServer.RegisterOnShutdown(func() {
 				log.Printf("<%s> Shutting down", name)
