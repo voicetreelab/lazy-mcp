@@ -4,6 +4,7 @@
     "addr": ":9090",
     "name": "MCP Proxy",
     "version": "1.0.0",
+    "type": "streamable-http",
     "options": {
       "panicIfInvalid": false,
       "logEnabled": true,
