@@ -121,12 +121,12 @@
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                 data-bs-target="#feature2">
-                            SSE Support
+                            SSE/Streamable-http Support
                         </button>
                     </h2>
                     <div id="feature2" class="accordion-collapse collapse" data-bs-parent="#featuresAccordion">
                         <div class="accordion-body">
-                            Provides an SSE (Server-Sent Events) server for real-time updates.
+                            Supports Server-Sent Events (SSE) and streamable HTTP MCP Servers
                         </div>
                     </div>
                 </div>
@@ -194,9 +194,10 @@
         }
         try {
             const baseUrlObj = new URL(baseURL);
+            const suffix = fromConfig?.mcpProxy?.type === 'streamable-http' ? 'mcp' : 'sse';
             for (const key of Object.keys(mcpServers)) {
                 const url = new URL(baseUrlObj);
-                url.pathname = `${url.pathname.replace(/\/+$/, '')}/${key}/sse`.replace(/\/+/g, '/');
+                url.pathname = `${url.pathname.replace(/\/+$/, '')}/${key}/${suffix}`.replace(/\/+/g, '/');
                 const server = {
                     url: url.toString()
                 };
