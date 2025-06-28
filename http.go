@@ -74,7 +74,6 @@ func recoverMiddleware(prefix string) MiddlewareFunc {
 }
 
 func startHTTPServer(config *Config) error {
-
 	baseURL, uErr := url.Parse(config.McpProxy.BaseURL)
 	if uErr != nil {
 		return uErr
