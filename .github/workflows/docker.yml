@@ -4,6 +4,11 @@ on:
   push:
     branches: [ master ]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image Version'
+        required: false
+        default: 'latest'
 
 jobs:
   build-and-push:
@@ -15,6 +20,7 @@ jobs:
       - name: Build and push Docker image
         uses: TBXark/docker-action@master
         with:
+          version: ${{ github.event.inputs.version || 'latest' }}
           docker_registry: ghcr.io
           docker_username: ${{ github.actor }}
           docker_password: ${{ secrets.GITHUB_TOKEN }}
