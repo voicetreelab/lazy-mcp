@@ -147,8 +147,8 @@ func startHTTPServer(config *Config) error {
 	}()
 
 	go func() {
-		log.Printf("Starting SSE server")
-		log.Printf("SSE server listening on %s", config.McpProxy.Addr)
+		log.Printf("Starting %s server", config.McpProxy.Type)
+		log.Printf("%s server listening on %s", config.McpProxy.Type, config.McpProxy.Addr)
 		hErr := httpServer.ListenAndServe()
 		if hErr != nil && !errors.Is(hErr, http.ErrServerClosed) {
 			log.Fatalf("Failed to start server: %v", hErr)
