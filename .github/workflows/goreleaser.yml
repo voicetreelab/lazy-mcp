@@ -1,4 +1,5 @@
 name: Goreleaser
+
 on:
   push:
     tags:

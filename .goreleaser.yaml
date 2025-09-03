@@ -1,3 +1,4 @@
+version: 2
 builds:
   - id: mcp-proxy
     main: .
@@ -6,9 +7,14 @@ builds:
       - -s -w -X main.BuildVersion={{.Version}}
     goos:
       - linux
+      - darwin
+      - windows
     goarch:
       - amd64
       - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
 changelog:
   disable: false
   use: github
