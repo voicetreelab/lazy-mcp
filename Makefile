@@ -17,13 +17,9 @@ buildLinuxX86:
 buildImage:
 	docker buildx build --platform=linux/amd64,linux/arm64 -t ghcr.io/tbxark/map-proxy:latest . --push --provenance=false
 
-.PHONY: lint
-lint:
-	golangci-lint run
-
 .PHONY: format
 format:
-	golangci-lint fmt
-	golangci-lint run --fix
+	golangci-lint fmt --no-config --enable gofmt,goimports
+	golangci-lint run --no-config --fix
 	go fmt ./...
 	go mod tidy
