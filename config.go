@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
-	"net/http"
+	nethttp "net/http"
+	"strings"
 	"time"
 
-	"github.com/TBXark/confstore"
 	"github.com/TBXark/optional-go"
+	"github.com/go-sphere/confstore"
+	"github.com/go-sphere/confstore/codec"
+	"github.com/go-sphere/confstore/provider"
+	"github.com/go-sphere/confstore/provider/file"
+	"github.com/go-sphere/confstore/provider/http"
 )
 
 type StdioMCPClientConfig struct {
@@ -131,18 +137,56 @@ type FullConfig struct {
 	McpServers map[string]*MCPClientConfigV2 `json:"mcpServers"`
 }
 
-func load(path string, insecure bool) (*Config, error) {
-	httpClient := http.DefaultClient
-	if insecure {
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		httpClient = &http.Client{Transport: transport}
+func newConfProvider(path string, insecure, expandEnv bool, httpHeaders string, httpTimeout int) (provider.Provider, error) {
+	if http.IsRemoteURL(path) {
+		var opts []http.Option
+		httpClient := nethttp.DefaultClient
+		if insecure {
+			transport := nethttp.DefaultTransport.(*nethttp.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+			httpClient = &nethttp.Client{Transport: transport}
+		}
+		if httpTimeout > 0 {
+			httpClient.Timeout = time.Duration(httpTimeout) * time.Second
+		}
+		opts = append(opts, http.WithClient(httpClient))
+		if httpHeaders != "" {
+			// format: 'Key1:Value1;Key2:Value2'
+			headers := make(nethttp.Header)
+			for _, kv := range strings.Split(httpHeaders, ";") {
+				parts := strings.SplitN(kv, ":", 2)
+				if len(parts) == 2 {
+					key := strings.TrimSpace(parts[0])
+					value := strings.TrimSpace(parts[1])
+					if key != "" && value != "" {
+						headers.Add(key, value)
+					}
+				}
+			}
+		}
+		pro := http.New(path, opts...)
+		if expandEnv {
+			return provider.NewExpandEnv(pro), nil
+		} else {
+			return pro, nil
+		}
 	}
+	if file.IsLocalPath(path) {
+		if expandEnv {
+			return provider.NewExpandEnv(file.New(path, file.WithExpandEnv())), nil
+		} else {
+			return file.New(path), nil
+		}
+	}
+	return nil, errors.New("unsupported config path")
+}
 
-	conf, err := confstore.Load[FullConfig](
-		path,
-		confstore.WithHTTPClientOption(httpClient),
-	)
+func load(path string, insecure, expandEnv bool, httpHeaders string, httpTimeout int) (*Config, error) {
+	pro, err := newConfProvider(path, insecure, expandEnv, httpHeaders, httpTimeout)
+	if err != nil {
+		return nil, err
+	}
+	conf, err := confstore.Load[FullConfig](context.Background(), pro, codec.JsonCodec())
 	if err != nil {
 		return nil, err
 	}
