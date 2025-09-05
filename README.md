@@ -160,10 +160,18 @@ For http streaming mcp servers, the `url` field is required. and `transportType`
 Usage of mcp-proxy:
   -config string
         path to config file or a http(s) url (default "config.json")
-  -help
-        print help and exit
+  -expand-env
+        expand environment variables in config file (default true)
+  -http-headers string
+        optional HTTP headers for config URL, format: 'Key1:Value1;Key2:Value2'
+  -http-timeout int
+        HTTP timeout in seconds when fetching config from URL (default 10)
+  -insecure
+        allow insecure HTTPS connections by skipping TLS certificate verification
   -version
         print version and exit
+  -help
+        print help and exit
 ```
 
 1. The server will start and aggregate the tools and capabilities of the configured MCP clients.
