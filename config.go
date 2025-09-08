@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
 	nethttp "net/http"
@@ -186,7 +185,7 @@ func load(path string, insecure, expandEnv bool, httpHeaders string, httpTimeout
 	if err != nil {
 		return nil, err
 	}
-	conf, err := confstore.Load[FullConfig](context.Background(), pro, codec.JsonCodec())
+	conf, err := confstore.Load[FullConfig](pro, codec.JsonCodec())
 	if err != nil {
 		return nil, err
 	}
