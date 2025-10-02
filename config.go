@@ -64,6 +64,7 @@ type ToolFilterConfig struct {
 type OptionsV2 struct {
 	PanicIfInvalid optional.Field[bool] `json:"panicIfInvalid,omitempty"`
 	LogEnabled     optional.Field[bool] `json:"logEnabled,omitempty"`
+	LazyLoad       optional.Field[bool] `json:"lazyLoad,omitempty"`
 	AuthTokens     []string             `json:"authTokens,omitempty"`
 	ToolFilter     *ToolFilterConfig    `json:"toolFilter,omitempty"`
 }
@@ -209,6 +210,9 @@ func load(path string, insecure, expandEnv bool, httpHeaders string, httpTimeout
 		}
 		if !clientConfig.Options.LogEnabled.Present() {
 			clientConfig.Options.LogEnabled = conf.McpProxy.Options.LogEnabled
+		}
+		if !clientConfig.Options.LazyLoad.Present() {
+			clientConfig.Options.LazyLoad = conf.McpProxy.Options.LazyLoad
 		}
 	}
 
