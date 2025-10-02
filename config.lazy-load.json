@@ -1,0 +1,28 @@
+{
+  "mcpProxy": {
+    "baseURL": "http://localhost:9090",
+    "addr": ":9090",
+    "name": "MCP Proxy with Lazy Loading",
+    "version": "1.0.0",
+    "type": "streamable-http",
+    "options": {
+      "lazyLoad": true,
+      "logEnabled": true
+    }
+  },
+  "mcpServers": {
+    "serena": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/bobbobby/repos/tools/serena",
+        "run",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "claude-code"
+      ],
+      "env": {}
+    }
+  }
+}
