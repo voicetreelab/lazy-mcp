@@ -1,90 +1,113 @@
 # Configuration
 
-This project supports a v2 JSON configuration. v1 configs are automatically migrated at load time.
+## Basic Setup
 
-- Online converter (build Claude config from your proxy): https://tbxark.github.io/mcp-proxy
-
-## Full Example
-
-```jsonc
+```json
 {
   "mcpProxy": {
-    "baseURL": "https://mcp.example.com",
-    "addr": ":9090",
-    "name": "MCP Proxy",
+    "baseURL": "http://localhost",
+    "addr": ":8080",
+    "name": "MCP Router",
     "version": "1.0.0",
-    "type": "streamable-http", // or "sse" (default)
+    "type": "streamable-http",
     "options": {
-      "panicIfInvalid": false,
       "logEnabled": true,
-      "authTokens": ["DefaultToken"]
+      "authTokens": []
     }
   },
-  "mcpServers": {
-    "github": {
-      // stdio client
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>" },
-      "options": {
-        "toolFilter": {
-          "mode": "block",
-          "list": ["create_or_update_file"]
-        }
-      }
-    },
-    "fetch": {
-      // stdio client
-      "command": "uvx",
-      "args": ["mcp-server-fetch"],
-      "options": {
-        "panicIfInvalid": true,
-        "logEnabled": false,
-        "authTokens": ["SpecificToken"]
-      }
-    },
-    "amap": {
-      // SSE client
-      "url": "https://mcp.amap.com/sse?key=<YOUR_TOKEN>"
-    }
-  }
+  "mcpServers": {}
 }
 ```
 
 ## mcpProxy
 
-- `baseURL`: Public URL base used to build client endpoints.
-- `addr`: Bind address (e.g. `:9090`).
-- `name`, `version`: Server identity for MCP handshake.
-- `type`: `sse` (default) or `streamable-http`.
-- `options`: Defaults inherited by `mcpServers.*.options` (can be overridden per server).
+- `baseURL`: Public URL base for client endpoints
+- `addr`: Bind address (e.g. `:8080`)
+- `name`, `version`: Server identity for MCP handshake
+- `type`: `sse` or `streamable-http`
+- `options`:
+  - `logEnabled` (bool): Enable request logging
+  - `authTokens` ([]string): Valid bearer tokens for authentication
 
-## mcpServers
+## Hierarchy Configuration
 
-Each entry defines a downstream MCP server. Supported client types:
+The router loads tool hierarchy from `testdata/mcp_hierarchy/` (default path). Each directory contains a JSON file defining:
 
-- `stdio` (implicit when `command` is set): run a subprocess via stdio.
-- `sse` (implicit when `url` is set and `transportType` ≠ `streamable-http`): connect via Server‑Sent Events.
-- `streamable-http` (requires `transportType: "streamable-http"`): connect via HTTP streaming.
+**Root** (`root.json`):
+```json
+{
+  "overview": "Description of what this level provides",
+  "categories": {
+    "coding_tools": "Development tools...",
+    "web_tools": "Web scraping..."
+  },
+  "tools": {
+    "get_tools_in_category": {
+      "description": "Navigate the hierarchy",
+      "inputSchema": {...}
+    },
+    "execute_tool": {
+      "description": "Execute a tool by path",
+      "inputSchema": {...}
+    }
+  }
+}
+```
 
-Common fields:
+**Category with MCP Server** (`coding_tools/serena/serena.json`):
+```json
+{
+  "overview": "Serena semantic code analysis",
+  "mcp_server": {
+    "name": "serena",
+    "type": "stdio",
+    "command": "uv",
+    "args": ["--directory", "/path/to/serena", "run", "serena", "start-mcp-server"],
+    "env": {}
+  },
+  "categories": {
+    "search": "Find symbols and references",
+    "edit": "Modify code intelligently"
+  },
+  "tools": {
+    "get_symbols_overview": {
+      "description": "Get overview of file symbols",
+      "maps_to": "get_symbols_overview"
+    }
+  }
+}
+```
 
-- `command`, `args`, `env` — for `stdio` clients.
-- `url`, `headers` — for `sse` and `streamable-http` clients.
-- `timeout` — request timeout for `streamable-http`.
-- `options` — per‑server overrides and filters (see below).
+### MCP Server Configuration
 
-## options
+The `mcp_server` block supports:
+- **stdio**: `command`, `args`, `env`
+- **sse**: `url`, `headers`
+- **streamable-http**: `url`, `headers`, `timeout`
 
-- `panicIfInvalid` (bool): If true, startup fails when a client cannot initialize.
-- `logEnabled` (bool): Log requests and events for this client.
-- `authTokens` ([]string): Valid bearer tokens; requests must include `Authorization: <token>`.
-- `toolFilter` (object): Selectively expose tools to the proxy:
-  - `mode`: `allow` or `block`.
-  - `list`: List of tool names.
+Server configs are inherited by child categories (no need to repeat).
 
-Notes:
+### Tool Mapping
 
-- `mcpProxy.options.authTokens` serves as the default token set if a server omits `options.authTokens`.
-- To discover tool names for filtering, start without a filter and check logs for lines like `<server> Adding tool <name>`.
+- `maps_to`: Maps hierarchy tool name to actual MCP tool name
+- If omitted, hierarchy name is used as-is
+- Enables renaming tools for better organization
 
+## Structure Example
+
+```
+testdata/mcp_hierarchy/
+├── root.json
+├── coding_tools/
+│   ├── coding_tools.json
+│   └── serena/
+│       ├── serena.json          (MCP server config here)
+│       ├── search/
+│       │   └── search.json
+│       └── edit/
+│           └── edit.json
+└── web_tools/
+    └── web_tools.json
+```
+
+See example hierarchy in the repository.

@@ -1,69 +1,67 @@
 # Deployment
 
+## Prerequisites
+
+The router requires a hierarchy directory structure at `testdata/mcp_hierarchy/` (or custom path). Ensure this is available in your deployment environment.
+
 ## Docker
 
-Run with a local config file mounted into the container:
+Run with config and hierarchy mounted:
 
 ```bash
 docker run -d \
-  -p 9090:9090 \
+  -p 8080:8080 \
   -v /path/to/config.json:/config/config.json \
+  -v /path/to/mcp_hierarchy:/app/testdata/mcp_hierarchy \
   ghcr.io/tbxark/mcp-proxy:latest
 ```
 
-Or reference a remote config URL:
+Or with remote config:
 
 ```bash
-docker run -d -p 9090:9090 \
+docker run -d -p 8080:8080 \
+  -v /path/to/mcp_hierarchy:/app/testdata/mcp_hierarchy \
   ghcr.io/tbxark/mcp-proxy:latest \
   --config https://example.com/config.json
 ```
 
-The image supports launching MCP servers via `npx` and `uvx` out of the box.
+The image includes `npx` and `uvx` for launching MCP servers.
 
 ## Docker Compose
 
-Minimal compose file:
-
 ```yaml
 services:
-  app:
+  mcp-router:
     image: ghcr.io/tbxark/mcp-proxy:latest
     pull_policy: always
     volumes:
       - ./config.json:/config/config.json
+      - ./mcp_hierarchy:/app/testdata/mcp_hierarchy
     ports:
-      - "9090:9090"
+      - "8080:8080"
     restart: always
 ```
 
-Serving the config via an internal file server (no host mount into `app`):
+## Security
 
-```yaml
-services:
-  caddy:
-    image: caddy:latest
-    pull_policy: always
-    expose:
-      - "80"
-    volumes:
-      - ./config.json:/config/config.json
-    command: ["caddy", "file-server", "--root", "/config"]
+- Use `authTokens` for authentication
+- Set `logEnabled: true` for debugging
+- Ensure hierarchy JSON files are not writable at runtime
+- MCP servers inherit security context from the router process
 
-  app:
-    image: ghcr.io/tbxark/mcp-proxy:latest
-    pull_policy: always
-    ports:
-      - "9090:9090"
-    restart: always
-    depends_on:
-      - caddy
-    command: ["--config", "http://caddy/config.json"]
+## Hierarchy Setup
+
+Your deployment must include the hierarchy directory structure:
+
+```
+mcp_hierarchy/
+├── root.json                 (defines meta-tools)
+├── coding_tools/
+│   ├── coding_tools.json
+│   └── serena/
+│       └── serena.json       (MCP server configs here)
+└── web_tools/
+    └── web_tools.json
 ```
 
-## Security Notes
-
-- Prefer `authTokens` per downstream server; only use the `mcpProxy` default when appropriate.
-- If a downstream server cannot set headers, you can embed a token in the route key (e.g. `fetch/<token>`) and route via that path.
-- Set `options.panicIfInvalid: true` for critical servers to fail fast on misconfiguration.
-
+See [CONFIGURATION.md](CONFIGURATION.md) for hierarchy format details.
