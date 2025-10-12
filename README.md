@@ -1,64 +1,83 @@
-# MCP Proxy Server
+# MCP Router
 
-An MCP proxy that aggregates multiple MCP servers behind a single HTTP entrypoint.
+Hierarchical MCP router that exposes 2 meta-tools for navigating and executing tools across multiple MCP servers.
 
-## Features
+## What It Does
 
-- Proxy multiple MCP clients: aggregate tools, prompts, and resources from many servers.
-- SSE and streamable HTTP: serve via Server‑Sent Events or streamable HTTP.
-- Flexible config: supports `stdio`, `sse`, and `streamable-http` client types.
+Routes tool requests through a hierarchical structure, lazy-loading MCP servers only when their tools are executed. Instead of exposing 100+ tools upfront, it provides:
+- `get_tools_in_category(path)` - Navigate the tool hierarchy
+- `execute_tool(tool_path, arguments)` - Execute tools by path
+
+## Example Flow
+
+```
+1. List tools → ["get_tools_in_category", "execute_tool"]
+
+2. get_tools_in_category("") → {
+     "categories": {
+       "coding_tools": "Development tools...",
+       "web_tools": "Web scraping..."
+     }
+   }
+
+3. get_tools_in_category("coding_tools.serena") → {
+     "overview": "Semantic code analysis",
+     "tools": {"find_symbol": "...", "get_symbols_overview": "..."}
+   }
+
+4. execute_tool("coding_tools.serena.find_symbol", {...})
+   → Lazy loads Serena server (if not already loaded)
+   → Proxies request to Serena
+   → Returns result
+```
+
+## Benefits
+
+Reduces LLM context by 95% - only 2 tools exposed initially instead of all tools from all servers, and servers load on-demand.
+
+## Quick Start
+
+```bash
+# Build
+make build
+./build/mcp-proxy --config config.json
+
+# Or install
+go install github.com/TBXark/mcp-proxy@latest
+
+# Docker
+docker run -d -p 9090:9090 -v /path/to/config.json:/config/config.json ghcr.io/tbxark/mcp-proxy:latest
+```
+
+## Configuration
+
+```json
+{
+  "mcpProxy": {
+    "baseURL": "http://localhost",
+    "addr": ":8080",
+    "name": "MCP Proxy",
+    "version": "1.0.0",
+    "type": "streamable-http"
+  },
+  "mcpServers": {}
+}
+```
+
+Tool hierarchy configured in `testdata/mcp_hierarchy/` with JSON files defining categories, tools, and MCP server configs.
+
+See [docs/configuration.md](docs/CONFIGURATION.md) for details.
 
 ## Documentation
 
 - Configuration: [docs/configuration.md](docs/CONFIGURATION.md)
 - Usage: [docs/usage.md](docs/USAGE.md)
 - Deployment: [docs/deployment.md](docs/DEPLOYMENT.md)
-- Claude config converter: https://tbxark.github.io/mcp-proxy
 
-## Quick Start
+## Credits
 
-### Build from source
-
-```bash
-git clone https://github.com/TBXark/mcp-proxy.git
-cd mcp-proxy
-make build
-./build/mcp-proxy --config path/to/config.json
-```
-
-### Install via Go
-
-```bash
-go install github.com/TBXark/mcp-proxy@latest
-```
-
-### Docker
-
-The image includes support for launching MCP servers via `npx` and `uvx`.
-
-```bash
-docker run -d -p 9090:9090 -v /path/to/config.json:/config/config.json ghcr.io/tbxark/mcp-proxy:latest
-# or provide a remote config
-docker run -d -p 9090:9090 ghcr.io/tbxark/mcp-proxy:latest --config https://example.com/config.json
-```
-
-More deployment options (including docker‑compose) are in [docs/deployment.md](docs/DEPLOYMENT.md).
-
-## Configuration
-
-See full configuration reference and examples in [docs/configuration.md](docs/CONFIGURATION.md).
-An online Claude config converter is available at: https://tbxark.github.io/mcp-proxy
-
-
-## Usage
-
-Command‑line flags, endpoints, and auth examples are documented in [docs/usage.md](docs/USAGE.md).
-
-## Thanks
-
-- This project was inspired by the [adamwattis/mcp-proxy-server](https://github.com/adamwattis/mcp-proxy-server) project
-- If you have any questions about deployment, you can refer to  [《在 Docker 沙箱中运行 MCP Server》](https://miantiao.me/posts/guide-to-running-mcp-server-in-a-sandbox/)([@ccbikai](https://github.com/ccbikai))
+Forked from [TBXark/mcp-proxy](https://github.com/TBXark/mcp-proxy) - extended with hierarchical routing and lazy loading.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
