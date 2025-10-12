@@ -1,0 +1,195 @@
+{
+  "serverName": "everything",
+  "tools": [
+    {
+      "name": "echo",
+      "title": "Echo",
+      "description": "Echoes back the input message. Useful for testing basic tool calling functionality.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The message to echo back"
+          }
+        },
+        "required": ["message"]
+      }
+    },
+    {
+      "name": "add",
+      "title": "Add Numbers",
+      "description": "Adds two numbers together and returns the sum",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "number",
+            "description": "First number"
+          },
+          "b": {
+            "type": "number",
+            "description": "Second number"
+          }
+        },
+        "required": ["a", "b"]
+      }
+    },
+    {
+      "name": "longRunningOperation",
+      "title": "Long Running Operation",
+      "description": "Demonstrates progress notifications for operations that take time to complete",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "duration": {
+            "type": "number",
+            "description": "Duration of the operation in seconds",
+            "default": 10
+          },
+          "steps": {
+            "type": "number",
+            "description": "Number of progress steps to report",
+            "default": 5
+          }
+        }
+      }
+    },
+    {
+      "name": "printEnv",
+      "title": "Print Environment",
+      "description": "Prints environment variables for debugging purposes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "string",
+            "description": "Specific environment variable to print, or omit for all"
+          }
+        }
+      }
+    },
+    {
+      "name": "sampleLLM",
+      "title": "Sample LLM",
+      "description": "Tests LLM sampling capabilities by requesting completion from the connected model",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "The prompt to send to the LLM"
+          },
+          "maxTokens": {
+            "type": "number",
+            "description": "Maximum tokens to generate",
+            "default": 100
+          }
+        },
+        "required": ["prompt"]
+      }
+    },
+    {
+      "name": "getTinyImage",
+      "title": "Get Tiny Image",
+      "description": "Returns a small test image for testing binary content handling",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["png", "jpg", "gif"],
+            "description": "Image format to return",
+            "default": "png"
+          }
+        }
+      }
+    },
+    {
+      "name": "annotatedMessage",
+      "title": "Annotated Message",
+      "description": "Demonstrates content annotations with structured metadata",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Message to annotate"
+          },
+          "annotations": {
+            "type": "object",
+            "description": "Metadata annotations to attach"
+          }
+        },
+        "required": ["message"]
+      }
+    },
+    {
+      "name": "getResourceReference",
+      "title": "Get Resource Reference",
+      "description": "Returns references to MCP resources for testing resource linking",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "resourceId": {
+            "type": "string",
+            "description": "ID of the resource to reference"
+          }
+        },
+        "required": ["resourceId"]
+      }
+    },
+    {
+      "name": "startElicitation",
+      "title": "Start Elicitation",
+      "description": "Initiates an interactive elicitation flow to gather information from the user",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Topic to elicit information about"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of questions to ask"
+          }
+        },
+        "required": ["topic"]
+      }
+    },
+    {
+      "name": "structuredContent",
+      "title": "Structured Content",
+      "description": "Returns structured data in various formats to test content type handling",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["json", "xml", "yaml", "markdown"],
+            "description": "Format of the structured content",
+            "default": "json"
+          },
+          "nested": {
+            "type": "boolean",
+            "description": "Whether to include nested structures",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "listRoots",
+      "title": "List Roots",
+      "description": "Displays MCP roots information showing available root contexts",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}

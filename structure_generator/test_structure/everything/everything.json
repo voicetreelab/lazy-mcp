@@ -1,0 +1,164 @@
+{
+  "path": "everything",
+  "overview": "everything MCP server with 10 tools",
+  "tools": {
+    "add": {
+      "description": "Adds two numbers",
+      "inputSchema": {
+        "properties": {
+          "a": {
+            "description": "First number",
+            "type": "number"
+          },
+          "b": {
+            "description": "Second number",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b"
+        ],
+        "type": "object"
+      }
+    },
+    "annotatedMessage": {
+      "description": "Demonstrates how annotations can be used to provide metadata about content",
+      "inputSchema": {
+        "properties": {
+          "includeImage": {
+            "default": false,
+            "description": "Whether to include an example image",
+            "type": "boolean"
+          },
+          "messageType": {
+            "description": "Type of message to demonstrate different annotation patterns",
+            "enum": [
+              "error",
+              "success",
+              "debug"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "messageType"
+        ],
+        "type": "object"
+      }
+    },
+    "echo": {
+      "description": "Echoes back the input",
+      "inputSchema": {
+        "properties": {
+          "message": {
+            "description": "Message to echo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      }
+    },
+    "getResourceLinks": {
+      "description": "Returns multiple resource links that reference different types of resources",
+      "inputSchema": {
+        "properties": {
+          "count": {
+            "default": 3,
+            "description": "Number of resource links to return (1-10)",
+            "maximum": 10,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "getResourceReference": {
+      "description": "Returns a resource reference that can be used by MCP clients",
+      "inputSchema": {
+        "properties": {
+          "resourceId": {
+            "description": "ID of the resource to reference (1-100)",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "resourceId"
+        ],
+        "type": "object"
+      }
+    },
+    "getTinyImage": {
+      "description": "Returns the MCP_TINY_IMAGE",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    "longRunningOperation": {
+      "description": "Demonstrates a long running operation with progress updates",
+      "inputSchema": {
+        "properties": {
+          "duration": {
+            "default": 10,
+            "description": "Duration of the operation in seconds",
+            "type": "number"
+          },
+          "steps": {
+            "default": 5,
+            "description": "Number of steps in the operation",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "printEnv": {
+      "description": "Prints all environment variables, helpful for debugging MCP server configuration",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    "sampleLLM": {
+      "description": "Samples from an LLM using MCP's sampling feature",
+      "inputSchema": {
+        "properties": {
+          "maxTokens": {
+            "default": 100,
+            "description": "Maximum number of tokens to generate",
+            "type": "number"
+          },
+          "prompt": {
+            "description": "The prompt to send to the LLM",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "type": "object"
+      }
+    },
+    "structuredContent": {
+      "description": "Returns structured content along with an output schema for client data validation",
+      "inputSchema": {
+        "properties": {
+          "location": {
+            "description": "City name or zip code",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "location"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}
