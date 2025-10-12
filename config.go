@@ -62,11 +62,12 @@ type ToolFilterConfig struct {
 }
 
 type OptionsV2 struct {
-	PanicIfInvalid optional.Field[bool] `json:"panicIfInvalid,omitempty"`
-	LogEnabled     optional.Field[bool] `json:"logEnabled,omitempty"`
-	LazyLoad       optional.Field[bool] `json:"lazyLoad,omitempty"`
-	AuthTokens     []string             `json:"authTokens,omitempty"`
-	ToolFilter     *ToolFilterConfig    `json:"toolFilter,omitempty"`
+	PanicIfInvalid    optional.Field[bool] `json:"panicIfInvalid,omitempty"`
+	LogEnabled        optional.Field[bool] `json:"logEnabled,omitempty"`
+	LazyLoad          optional.Field[bool] `json:"lazyLoad,omitempty"`
+	RecursiveLazyLoad optional.Field[bool] `json:"recursiveLazyLoad,omitempty"`
+	AuthTokens        []string             `json:"authTokens,omitempty"`
+	ToolFilter        *ToolFilterConfig    `json:"toolFilter,omitempty"`
 }
 
 type MCPProxyConfigV2 struct {

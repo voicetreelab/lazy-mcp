@@ -1,0 +1,18 @@
+{
+  "overview": "Editing operations for modifying code with semantic awareness",
+  "categories": {},
+  "tools": {
+    "replace_symbol_body": {
+      "description": "Replace the body of a symbol (function, method, class) with new code",
+      "maps_to": "replace_symbol_body"
+    },
+    "insert_after_symbol": {
+      "description": "Insert content after a symbol's definition",
+      "maps_to": "insert_after_symbol"
+    },
+    "insert_before_symbol": {
+      "description": "Insert content before a symbol's definition",
+      "maps_to": "insert_before_symbol"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "mcpProxy": {
+    "baseURL": "http://localhost",
+    "addr": ":9999",
+    "name": "Recursive MCP Proxy",
+    "version": "1.0.0",
+    "type": "streamable-http",
+    "options": {
+      "recursiveLazyLoad": true,
+      "logEnabled": true
+    }
+  },
+  "mcpServers": {}
+}

@@ -1,0 +1,35 @@
+{
+  "overview": "Find symbols by name path. Specify depth > 0 for children (e.g., 1 for class methods).",
+  "categories": {},
+  "tools": {
+    "find_symbol": {
+      "description": "Find symbols by name path (e.g., 'Class/method'). Supports depth for nested symbols, filtering by kind, and optional body inclusion.",
+      "maps_to": "find_symbol",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name_path": {
+            "type": "string",
+            "description": "Symbol name or path (e.g., 'Foo', 'Foo/bar', '/Foo/bar')"
+          },
+          "relative_path": {
+            "type": "string",
+            "description": "Restrict to file/directory",
+            "default": ""
+          },
+          "depth": {
+            "type": "integer",
+            "description": "Depth to retrieve descendants (e.g., 1 for class methods)",
+            "default": 0
+          },
+          "include_body": {
+            "type": "boolean",
+            "description": "Include source code. Use judiciously.",
+            "default": false
+          }
+        },
+        "required": ["name_path"]
+      }
+    }
+  }
+}

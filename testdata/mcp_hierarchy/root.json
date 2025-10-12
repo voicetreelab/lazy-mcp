@@ -1,0 +1,40 @@
+{
+  "overview": "MCP Proxy - Hierarchical tool organization system. Use get_tools_in_category to explore available categories and execute_tool to run tools.",
+  "categories": {
+    "coding_tools": "Development tools including semantic code analysis, file operations, and testing utilities",
+    "web_tools": "Web scraping, browser automation, and HTTP clients"
+  },
+  "tools": {
+    "get_tools_in_category": {
+      "description": "Navigate the tool hierarchy and discover available tools in a category. Returns categories, subcategories, and tools at the specified path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Category path using dot notation (e.g., 'coding_tools' or 'coding_tools.serena.search'). Use empty string or '/' for root."
+          }
+        },
+        "required": ["path"]
+      }
+    },
+    "execute_tool": {
+      "description": "Execute a tool by its full path. Automatically proxies the request to the appropriate MCP server.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tool_path": {
+            "type": "string",
+            "description": "Full tool path using dot notation (e.g., 'coding_tools.serena.search.search_symbol') or just tool name if unique"
+          },
+          "arguments": {
+            "type": "object",
+            "description": "Arguments to pass to the tool",
+            "additionalProperties": true
+          }
+        },
+        "required": ["tool_path", "arguments"]
+      }
+    }
+  }
+}

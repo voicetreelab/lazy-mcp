@@ -1,0 +1,14 @@
+{
+  "overview": "Playwright provides browser automation capabilities for web testing and scraping",
+  "mcp_server": {
+    "name": "playwright",
+    "type": "stdio",
+    "command": "npx",
+    "args": ["@playwright/mcp@latest"],
+    "env": {}
+  },
+  "categories": {
+    "browser": "Browser control operations - navigate, click, type, screenshot"
+  },
+  "tools": {}
+}

@@ -1,0 +1,32 @@
+{
+  "overview": "Serena provides semantic code understanding and manipulation. Search for symbols, understand code relationships, and perform intelligent edits.",
+  "mcp_server": {
+    "name": "serena",
+    "type": "stdio",
+    "command": "uv",
+    "args": [
+      "--directory",
+      "/Users/bobbobby/repos/tools/serena",
+      "run",
+      "serena",
+      "start-mcp-server",
+      "--context",
+      "claude-code"
+    ],
+    "env": {}
+  },
+  "categories": {
+    "search": "Find symbols, references, and code patterns across your codebase",
+    "edit": "Modify code with semantic awareness - replace functions, insert code, refactor intelligently"
+  },
+  "tools": {
+    "get_symbols_overview": {
+      "description": "Get a high-level overview of top-level symbols in a file",
+      "maps_to": "get_symbols_overview"
+    },
+    "activate_project": {
+      "description": "Activate a registered project in Serena",
+      "maps_to": "activate_project"
+    }
+  }
+}
