@@ -44,7 +44,19 @@ func main() {
 	flag.Var(&inputFiles, "input", "Path to tool JSON file (can be specified multiple times)")
 	outputDir := flag.String("output", "./structure", "Output directory for generated structure")
 	configPath := flag.String("config", "", "Path to MCP server config JSON (to fetch tools from live servers)")
+	regenerateRoot := flag.Bool("regenerate-root", false, "Regenerate only root.json from existing server files")
 	flag.Parse()
+
+	// Mode 0: Regenerate root.json only
+	if *regenerateRoot {
+		log.Printf("Regenerating root.json from existing server files in: %s", *outputDir)
+		if err := generator.RegenerateRootJSON(*outputDir); err != nil {
+			log.Fatalf("Failed to regenerate root.json: %v", err)
+		}
+		fmt.Printf("\n✓ Successfully regenerated root.json!\n")
+		fmt.Printf("  Location: %s/root.json\n", *outputDir)
+		os.Exit(0)
+	}
 
 	var servers []generator.ServerTools
 
@@ -83,11 +95,13 @@ func main() {
 		}
 	} else {
 		log.Fatal("Usage:\n" +
-			"  Mode 1 (fetch from live servers): go run cmd/main.go -config <config.json>\n" +
-			"  Mode 2 (use pre-fetched data):    go run cmd/main.go -input <file1.json> -input <file2.json>\n\n" +
+			"  Mode 1 (fetch from live servers):  go run cmd/main.go -config <config.json>\n" +
+			"  Mode 2 (use pre-fetched data):     go run cmd/main.go -input <file1.json> -input <file2.json>\n" +
+			"  Mode 3 (regenerate root.json):     go run cmd/main.go -regenerate-root -output <structure_dir>\n\n" +
 			"Examples:\n" +
 			"  go run cmd/main.go -config tests/test_data/test_config.json\n" +
-			"  go run cmd/main.go -input tests/test_data/github_tools.json -input tests/test_data/everything_tools.json")
+			"  go run cmd/main.go -input tests/test_data/github_tools.json -input tests/test_data/everything_tools.json\n" +
+			"  go run cmd/main.go -regenerate-root -output ./structure")
 	}
 
 	if len(servers) == 0 {
@@ -148,11 +162,10 @@ func fetchFromConfig(configPath string) ([]generator.ServerTools, error) {
 
 	// Fetch from each server
 	for serverName, serverConfig := range config.MCPServers {
-		log.Printf("DEBUG: About to connect to server: %s with command: %s args: %v",
-			serverName, serverConfig.Command, serverConfig.Args)
 		log.Printf("Connecting to MCP server: %s", serverName)
 
 		serverTools, err := fetchToolsFromServer(ctx, serverName, serverConfig)
+
 		if err != nil {
 			log.Printf("⚠ Warning: Failed to fetch tools from %s: %v", serverName, err)
 			continue
@@ -175,7 +188,8 @@ func fetchToolsFromServer(ctx context.Context, name string, config ServerConfig)
 	if err != nil {
 		return generator.ServerTools{}, fmt.Errorf("failed to create client: %w", err)
 	}
-	defer mcpClient.Close()
+	// Note: We intentionally don't close the client here because stdio cleanup can hang.
+	// The process will terminate via os.Exit(0) in main(), which cleans up all resources.
 
 	log.Printf("[%s] Client created, initializing...", name)
 
@@ -202,14 +216,11 @@ func fetchToolsFromServer(ctx context.Context, name string, config ServerConfig)
 	var allTools []generator.Tool
 	toolsRequest := mcp.ListToolsRequest{}
 
-	log.Printf("[%s] Starting to list tools...", name)
-	log.Printf("[%s] Calling ListTools", name)
+	log.Printf("[%s] Listing tools...", name)
 	toolsResult, err := mcpClient.ListTools(localCtx, toolsRequest)
 	if err != nil {
 		return generator.ServerTools{}, fmt.Errorf("failed to list tools: %w", err)
 	}
-
-	log.Printf("[%s] ListTools returned %d tools", name, len(toolsResult.Tools))
 
 	// Convert mcp.Tool to generator.Tool
 	for _, mcpTool := range toolsResult.Tools {
