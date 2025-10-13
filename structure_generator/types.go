@@ -41,7 +41,8 @@ type ToolNode struct {
 type ToolDefinition struct {
 	Title        string                 `json:"title,omitempty"`
 	Description  string                 `json:"description,omitempty"`
-	InputSchema  map[string]interface{} `json:"inputSchema"`
+	MapsTo       string                 `json:"maps_to,omitempty"`        // Maps to actual MCP tool name
+	InputSchema  map[string]interface{} `json:"inputSchema,omitempty"`
 	OutputSchema map[string]interface{} `json:"outputSchema,omitempty"`
 	Annotations  map[string]interface{} `json:"annotations,omitempty"`
 }
@@ -136,13 +137,20 @@ func (n *ToolNode) MarshalJSON() ([]byte, error) {
 		"overview": n.Overview,
 	}
 
-	if len(n.Categories) > 0 {
+	// Always include categories (empty object if none)
+	if n.Categories == nil {
+		output["categories"] = map[string]string{}
+	} else {
 		output["categories"] = n.Categories
 	}
 
-	if len(n.Tools) > 0 {
+	// Always include tools (empty object if none)
+	if n.Tools == nil {
+		output["tools"] = map[string]ToolDefinition{}
+	} else {
 		output["tools"] = n.Tools
 	}
 
-	return json.MarshalIndent(output, "", "  ")
+	// Return un-indented JSON - let the encoder handle indentation
+	return json.Marshal(output)
 }

@@ -1,8 +1,4 @@
 {
-  "overview": "Search operations for finding code, symbols, and references",
-  "categories": {
-    "search_symbol": "Find symbols by name path with configurable depth and filtering",
-    "find_references": "Find all references to a symbol across the codebase"
-  },
+  "overview": "search cateogry with: search_symbol -> Find symbols by name path with configurable depth and filtering. find_references -> Find all references to a symbol across the codebase",
   "tools": {}
 }

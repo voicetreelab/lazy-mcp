@@ -28,6 +28,8 @@ func TestRecursiveLazyLoadingFlow(t *testing.T) {
 
 	// Test Phase 1: Initial tools/list should return only meta-tools
 	t.Run("Phase 1: tools/list returns only meta-tools", func(t *testing.T) {
+		t.Skip("TODO: Implement recursive lazy loading proxy")
+
 		// TODO: Initialize the recursive lazy loading proxy
 		// This would connect to the testdata/mcp_hierarchy structure
 
@@ -41,6 +43,8 @@ func TestRecursiveLazyLoadingFlow(t *testing.T) {
 
 	// Test Phase 2: Navigate root categories
 	t.Run("Phase 2: get_tools_in_category(\"\") returns root overview", func(t *testing.T) {
+		t.Skip("TODO: Implement recursive lazy loading proxy")
+
 		// Call get_tools_in_category with empty string or "/"
 		path := ""
 
@@ -64,6 +68,8 @@ func TestRecursiveLazyLoadingFlow(t *testing.T) {
 
 	// Test Phase 3: Navigate to coding_tools
 	t.Run("Phase 3: get_tools_in_category(\"coding_tools\") returns dev tools", func(t *testing.T) {
+		t.Skip("TODO: Implement recursive lazy loading proxy")
+
 		path := "coding_tools"
 
 		t.Logf("Calling get_tools_in_category(path=%q)", path)

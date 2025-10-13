@@ -1,4 +1,0 @@
-{
-  "path": "root",
-  "overview": "MCP tool structure with 2 servers and 14 total tools. Available servers: everything -> everything MCP server with 10 tools, github -> GitHub API integration - create repos, manage issues, and more"
-}
