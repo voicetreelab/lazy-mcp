@@ -1,0 +1,110 @@
+{
+  "serverName": "github",
+  "tools": [
+    {
+      "name": "create_repository",
+      "title": "Create Repository",
+      "description": "Create a new GitHub repository in your account or organization",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Repository description"
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Whether the repository should be private",
+            "default": false
+          }
+        },
+        "required": ["name"]
+      }
+    },
+    {
+      "name": "list_repositories",
+      "title": "List Repositories",
+      "description": "List repositories for the authenticated user or organization",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["all", "owner", "public", "private", "member"],
+            "description": "Type of repositories to list",
+            "default": "all"
+          },
+          "sort": {
+            "type": "string",
+            "enum": ["created", "updated", "pushed", "full_name"],
+            "description": "Sort criteria",
+            "default": "created"
+          }
+        }
+      }
+    },
+    {
+      "name": "create_issue",
+      "title": "Create Issue",
+      "description": "Create a new issue in a repository",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner username or organization"
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "title": {
+            "type": "string",
+            "description": "Issue title"
+          },
+          "body": {
+            "type": "string",
+            "description": "Issue description body"
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Labels to apply to the issue"
+          }
+        },
+        "required": ["owner", "repo", "title"]
+      }
+    },
+    {
+      "name": "list_issues",
+      "title": "List Issues",
+      "description": "List issues in a repository",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner"
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["open", "closed", "all"],
+            "description": "Issue state filter",
+            "default": "open"
+          }
+        },
+        "required": ["owner", "repo"]
+      }
+    }
+  ]
+}
