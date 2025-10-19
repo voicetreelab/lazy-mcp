@@ -39,7 +39,7 @@ Lazy MCP exposes two meta tools, which allows agents to explore a tree structure
    → Proxies request to Serena
    → Returns result
 ```
-
+![img_1.png](img_1.png)
 ![img.png](img.png)
 
 ## Quick Start
