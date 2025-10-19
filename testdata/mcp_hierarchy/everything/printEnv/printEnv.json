@@ -1,0 +1,11 @@
+{
+  "tools": {
+    "printEnv": {
+      "description": "Prints all environment variables, helpful for debugging MCP server configuration",
+      "maps_to": "printEnv",
+      "inputSchema": {
+        "type": "object"
+      }
+    }
+  }
+}

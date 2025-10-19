@@ -44,17 +44,17 @@ func main() {
 	flag.Var(&inputFiles, "input", "Path to tool JSON file (can be specified multiple times)")
 	outputDir := flag.String("output", "./structure", "Output directory for generated structure")
 	configPath := flag.String("config", "", "Path to MCP server config JSON (to fetch tools from live servers)")
-	regenerateRoot := flag.Bool("regenerate-root", false, "Regenerate only root.json from existing server files")
+	regenerateRoot := flag.Bool("regenerate", false, "Regenerate hierarchy from existing structure (preserves manual edits)")
 	flag.Parse()
 
-	// Mode 0: Regenerate root.json only
+	// Mode 0: Regenerate hierarchy
 	if *regenerateRoot {
-		log.Printf("Regenerating root.json from existing server files in: %s", *outputDir)
-		if err := generator.RegenerateRootJSON(*outputDir); err != nil {
-			log.Fatalf("Failed to regenerate root.json: %v", err)
+		log.Printf("Regenerating hierarchy (preserves manual edits) in: %s", *outputDir)
+		if err := generator.Regenerate(*outputDir); err != nil {
+			log.Fatalf("Failed to regenerate: %v", err)
 		}
-		fmt.Printf("\n✓ Successfully regenerated root.json!\n")
-		fmt.Printf("  Location: %s/root.json\n", *outputDir)
+		fmt.Printf("\n✓ Successfully regenerated hierarchy!\n")
+		fmt.Printf("  Location: %s\n", *outputDir)
 		os.Exit(0)
 	}
 
@@ -97,11 +97,11 @@ func main() {
 		log.Fatal("Usage:\n" +
 			"  Mode 1 (fetch from live servers):  go run cmd/main.go -config <config.json>\n" +
 			"  Mode 2 (use pre-fetched data):     go run cmd/main.go -input <file1.json> -input <file2.json>\n" +
-			"  Mode 3 (regenerate root.json):     go run cmd/main.go -regenerate-root -output <structure_dir>\n\n" +
+			"  Mode 3 (regenerate hierarchy):     go run cmd/main.go -regenerate -output <structure_dir>\n\n" +
 			"Examples:\n" +
 			"  go run cmd/main.go -config tests/test_data/test_config.json\n" +
 			"  go run cmd/main.go -input tests/test_data/github_tools.json -input tests/test_data/everything_tools.json\n" +
-			"  go run cmd/main.go -regenerate-root -output ./structure")
+			"  go run cmd/main.go -regenerate -output ./structure")
 	}
 
 	if len(servers) == 0 {

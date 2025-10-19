@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // GenerateStructure creates a two-layer folder structure from MCP server tools
@@ -23,16 +24,16 @@ func GenerateStructure(servers []ServerTools, outputDir string) error {
 	}
 
 	// Generate root.json AFTER all server files are created
-	if err := RegenerateRootJSON(outputDir); err != nil {
+	if err := Regenerate(outputDir); err != nil {
 		return fmt.Errorf("failed to generate root.json: %w", err)
 	}
 
 	return nil
 }
 
-// RegenerateRootJSON regenerates root.json by reading existing server files
-// This allows users to manually edit server overviews before regenerating the root
-func RegenerateRootJSON(outputDir string) error {
+// Regenerate regenerates all JSON files in the hierarchy by reading directory structure
+// Preserves manual edits - if an overview has been manually modified, it won't be overwritten
+func Regenerate(outputDir string) error {
 	// First, recursively regenerate all subdirectories
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
@@ -52,8 +53,7 @@ func RegenerateRootJSON(outputDir string) error {
 	}
 
 	// Now generate root.json from the regenerated server files
-	categories := make(map[string]string)
-	var serverDescriptions []string
+	var childSummaries []string
 	totalTools := 0
 
 	// Scan each server directory
@@ -76,35 +76,29 @@ func RegenerateRootJSON(outputDir string) error {
 			continue // Skip if invalid JSON
 		}
 
-		// Count tools from categories (since tools are in subdirectories)
+		// Count tools from subdirectories
 		toolCount := countTotalTools(filepath.Join(outputDir, serverName))
 		totalTools += toolCount
 
-		// Add server to root's categories with its overview
-		categories[serverName] = node.Overview
-
-		// Use the overview from the file (respects manual edits)
-		serverDescriptions = append(serverDescriptions, fmt.Sprintf("%s -> %s", serverName, node.Overview))
+		// Extract brief description from node's overview (first sentence or up to semicolon)
+		brief := extractBriefDescription(node.Overview)
+		childSummaries = append(childSummaries, fmt.Sprintf("%s -> %s", serverName, brief))
 	}
 
-	// Create overview text
+	// Create overview text in the format: "Root: N servers, M tools; server1 -> desc1, server2 -> desc2"
 	var overview string
-	if len(serverDescriptions) == 0 {
-		overview = "MCP tool structure with no servers"
-	} else if len(serverDescriptions) == 1 {
-		overview = fmt.Sprintf("MCP tool structure with 1 server and %d total tools. Available servers: %s",
-			totalTools, serverDescriptions[0])
+	if len(childSummaries) == 0 {
+		overview = "MCP Proxy - Hierarchical tool organization system. Use get_tools_in_category to explore available categories and execute_tool to run tools."
 	} else {
-		overview = fmt.Sprintf("MCP tool structure with %d servers and %d total tools. Available servers: %s",
-			len(serverDescriptions), totalTools, joinServerDescriptions(serverDescriptions))
+		overview = fmt.Sprintf("Root: %d servers, %d tools; %s",
+			len(childSummaries), totalTools, joinWithCommas(childSummaries))
 	}
 
-	// Create root node with categories pointing to servers
+	// Create root node - branch node with overview only
 	rootNode := ToolNode{
-		Path:       "root",
-		Overview:   overview,
-		Categories: categories,
-		Tools:      make(map[string]ToolDefinition),
+		Path:     "root",
+		Overview: overview,
+		Tools:    nil, // Root doesn't have direct tools
 	}
 
 	// Write root.json
@@ -134,8 +128,29 @@ func RegenerateDirectory(dirPath string, nodeName string) error {
 		}
 	}
 
-	// Now collect categories from all subdirectories
-	categories := make(map[string]string)
+	// Check if this is a leaf node by reading existing JSON file
+	nodeJSONPath := filepath.Join(dirPath, nodeName+".json")
+	existingData, err := os.ReadFile(nodeJSONPath)
+	isLeafNode := false
+
+	if err == nil {
+		var existingNode ToolNode
+		if json.Unmarshal(existingData, &existingNode) == nil {
+			// If this node has tools, it's a leaf node - don't regenerate it
+			if len(existingNode.Tools) > 0 {
+				isLeafNode = true
+			}
+		}
+	}
+
+	// Don't regenerate leaf nodes (tool files) - they should be left as-is
+	if isLeafNode {
+		return nil
+	}
+
+	// This is a branch node - collect info from children and generate overview
+	var childSummaries []string
+	totalTools := 0
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -156,54 +171,74 @@ func RegenerateDirectory(dirPath string, nodeName string) error {
 			continue // Skip if invalid JSON
 		}
 
-		// Add child to parent's categories with its overview
-		categories[childName] = childNode.Overview
+		// Determine if child is a leaf or branch
+		if len(childNode.Tools) > 0 {
+			// Leaf node - count tools
+			toolCount := len(childNode.Tools)
+			totalTools += toolCount
+			// Get the first tool's description as brief
+			var brief string
+			for _, tool := range childNode.Tools {
+				brief = extractBriefDescription(tool.Description)
+				break
+			}
+			childSummaries = append(childSummaries, fmt.Sprintf("%s -> %s", childName, brief))
+		} else {
+			// Branch node - use its overview
+			brief := extractBriefDescription(childNode.Overview)
+			childSummaries = append(childSummaries, fmt.Sprintf("%s -> %s", childName, brief))
+			// Count tools recursively
+			totalTools += countTotalTools(filepath.Join(dirPath, childName))
+		}
 	}
 
-	// Read existing JSON file to preserve any manual edits and check if it's a leaf node
-	nodeJSONPath := filepath.Join(dirPath, nodeName+".json")
-	existingOverview := ""
-	isLeafNode := false
+	// Generate new overview in format: "Name: N tools; child1 -> desc1, child2 -> desc2"
+	var generatedOverview string
+	if len(childSummaries) == 0 {
+		generatedOverview = fmt.Sprintf("%s with no items", nodeName)
+	} else if totalTools > 0 {
+		generatedOverview = fmt.Sprintf("%s: %d tools; %s", nodeName, totalTools, joinWithCommas(childSummaries))
+	} else {
+		generatedOverview = fmt.Sprintf("%s: %s", nodeName, joinWithCommas(childSummaries))
+	}
 
-	existingData, err := os.ReadFile(nodeJSONPath)
-	if err == nil {
+	// Check if user has manually edited the overview
+	// If existing overview doesn't match what we would have generated previously, preserve it
+	var finalOverview string
+	if existingData != nil {
 		var existingNode ToolNode
 		if json.Unmarshal(existingData, &existingNode) == nil {
-			existingOverview = existingNode.Overview
-			// If this node has tools, it's a leaf node - don't regenerate it
-			if len(existingNode.Tools) > 0 {
-				isLeafNode = true
+			// Compare existing with what would be generated
+			// If they're different and existing is not empty, user has edited it - preserve it
+			if existingNode.Overview != "" && existingNode.Overview != generatedOverview {
+				// Check if it looks like a previous auto-generated format
+				// Auto-generated always has ":" and either "tools;" or "with"
+				isAutoGenerated := strings.Contains(existingNode.Overview, ":") &&
+					(strings.Contains(existingNode.Overview, "tools;") || strings.Contains(existingNode.Overview, "with"))
+
+				if !isAutoGenerated {
+					// User has manually customized it, preserve it
+					finalOverview = existingNode.Overview
+				} else {
+					// It's an old auto-generated format, update it
+					finalOverview = generatedOverview
+				}
+			} else {
+				// Same as generated or empty, use new generated
+				finalOverview = generatedOverview
 			}
-		}
-	}
-
-	// Don't regenerate leaf nodes (tool files) - they should be left as-is
-	if isLeafNode {
-		return nil
-	}
-
-	// Generate new overview if none exists or if we need to update it
-	var overview string
-	if existingOverview != "" {
-		// Preserve manual edits
-		overview = existingOverview
-	} else {
-		// Generate new overview
-		if len(categories) == 0 {
-			overview = fmt.Sprintf("%s with no items", nodeName)
-		} else if len(categories) == 1 {
-			overview = fmt.Sprintf("%s containing 1 item", nodeName)
 		} else {
-			overview = fmt.Sprintf("%s containing %d items", nodeName, len(categories))
+			finalOverview = generatedOverview
 		}
+	} else {
+		finalOverview = generatedOverview
 	}
 
-	// Create the node
+	// Create the branch node
 	node := ToolNode{
-		Path:       nodeName,
-		Overview:   overview,
-		Categories: categories,
-		Tools:      make(map[string]ToolDefinition),
+		Path:     nodeName,
+		Overview: finalOverview,
+		Tools:    nil, // Branch nodes don't have tools
 	}
 
 	// Write the updated JSON file
@@ -239,8 +274,8 @@ func countTotalTools(dirPath string) int {
 		// If this node has tools, count them (leaf node)
 		if len(node.Tools) > 0 {
 			total += len(node.Tools)
-		} else if len(node.Categories) > 0 {
-			// Otherwise, recursively count tools in subdirectories
+		} else {
+			// Otherwise, it's a branch node - recursively count tools in subdirectories
 			total += countTotalTools(childPath)
 		}
 	}
@@ -248,27 +283,47 @@ func countTotalTools(dirPath string) int {
 	return total
 }
 
-// joinServerDescriptions joins server descriptions with proper formatting
-func joinServerDescriptions(descriptions []string) string {
-	if len(descriptions) == 0 {
+// joinWithCommas joins strings with commas
+func joinWithCommas(items []string) string {
+	if len(items) == 0 {
 		return ""
 	}
-	if len(descriptions) == 1 {
-		return descriptions[0]
+	if len(items) == 1 {
+		return items[0]
 	}
 
-	// Join all but last with ", " and last with " and "
 	result := ""
-	for i, desc := range descriptions {
+	for i, item := range items {
 		if i == 0 {
-			result = desc
-		} else if i == len(descriptions)-1 {
-			result += ", " + desc
+			result = item
 		} else {
-			result += ", " + desc
+			result += ", " + item
 		}
 	}
 	return result
+}
+
+// extractBriefDescription extracts a brief description (first sentence or up to semicolon)
+func extractBriefDescription(text string) string {
+	if text == "" {
+		return ""
+	}
+
+	// Split on semicolon first
+	if idx := strings.Index(text, ";"); idx != -1 {
+		return strings.TrimSpace(text[:idx])
+	}
+
+	// Split on first period followed by space
+	if idx := strings.Index(text, ". "); idx != -1 {
+		return strings.TrimSpace(text[:idx+1])
+	}
+
+	// Return full text if no delimiter found, but truncate if too long
+	if len(text) > 100 {
+		return text[:97] + "..."
+	}
+	return text
 }
 
 // generateServerStructure creates the folder and JSON file for a single server
@@ -280,28 +335,38 @@ func generateServerStructure(server ServerTools, outputDir string) error {
 		return fmt.Errorf("failed to create server directory: %w", err)
 	}
 
-	// Create individual tool files and collect their overviews for parent categories
-	categories := make(map[string]string)
+	// Create individual tool files
+	var childSummaries []string
 	for _, tool := range server.Tools {
-		// Generate tool file
+		// Generate tool file (leaf node)
 		if err := generateToolFile(tool, serverDir, server.ServerName); err != nil {
 			return fmt.Errorf("failed to generate tool file for %s: %w", tool.Name, err)
 		}
 
-		// Add to parent's categories with tool's description as overview
-		toolOverview := tool.Description
-		if toolOverview == "" {
-			toolOverview = fmt.Sprintf("Tool: %s", tool.Name)
+		// Collect brief description for parent overview
+		brief := extractBriefDescription(tool.Description)
+		if brief == "" {
+			brief = fmt.Sprintf("Tool: %s", tool.Name)
 		}
-		categories[tool.Name] = toolOverview
+		childSummaries = append(childSummaries, fmt.Sprintf("%s -> %s", tool.Name, brief))
 	}
 
-	// Create server-level ToolNode
+	// Generate overview for server: "ServerName: N tools; tool1 -> desc1, tool2 -> desc2"
+	toolCount := len(server.Tools)
+	var overview string
+	if toolCount == 0 {
+		overview = fmt.Sprintf("%s MCP server with no tools", server.ServerName)
+	} else if toolCount == 1 {
+		overview = fmt.Sprintf("%s: 1 tool; %s", server.ServerName, childSummaries[0])
+	} else {
+		overview = fmt.Sprintf("%s: %d tools; %s", server.ServerName, toolCount, joinWithCommas(childSummaries))
+	}
+
+	// Create server-level ToolNode (branch node)
 	serverNode := ToolNode{
-		Path:       server.ServerName,
-		Overview:   generateServerOverview(server),
-		Categories: categories, // Points to child tools
-		Tools:      make(map[string]ToolDefinition), // Empty at server level
+		Path:     server.ServerName,
+		Overview: overview,
+		Tools:    nil, // Branch node - no direct tools
 	}
 
 	// Write server JSON file: structure/server_name/server_name.json
@@ -311,6 +376,7 @@ func generateServerStructure(server ServerTools, outputDir string) error {
 
 // generateToolFile creates a directory and JSON file for a single tool
 // Structure: parent_dir/tool_name/tool_name.json
+// This creates a leaf node (has tools, no overview)
 func generateToolFile(tool Tool, parentDir string, serverName string) error {
 	// Create tool directory
 	toolDir := filepath.Join(parentDir, tool.Name)
@@ -318,17 +384,10 @@ func generateToolFile(tool Tool, parentDir string, serverName string) error {
 		return fmt.Errorf("failed to create tool directory: %w", err)
 	}
 
-	// Create tool overview from description
-	toolOverview := tool.Description
-	if toolOverview == "" {
-		toolOverview = fmt.Sprintf("%s tool from %s server", tool.Name, serverName)
-	}
-
-	// Create ToolNode for this tool
+	// Create ToolNode for this tool (leaf node - no overview, only tools)
 	toolNode := ToolNode{
-		Path:       filepath.Join(serverName, tool.Name),
-		Overview:   toolOverview,
-		Categories: make(map[string]string), // Empty - tools are leaf nodes
+		Path:     filepath.Join(serverName, tool.Name),
+		Overview: "", // Leaf nodes don't have overview
 		Tools: map[string]ToolDefinition{
 			tool.Name: {
 				Title:        tool.Title,
@@ -344,18 +403,6 @@ func generateToolFile(tool Tool, parentDir string, serverName string) error {
 	// Write tool JSON file
 	jsonPath := filepath.Join(toolDir, tool.Name+".json")
 	return writeNodeToJSON(toolNode, jsonPath)
-}
-
-// generateServerOverview creates a simple overview for the server
-func generateServerOverview(server ServerTools) string {
-	toolCount := len(server.Tools)
-	if toolCount == 0 {
-		return fmt.Sprintf("%s MCP server with no tools", server.ServerName)
-	}
-	if toolCount == 1 {
-		return fmt.Sprintf("%s MCP server with 1 tool", server.ServerName)
-	}
-	return fmt.Sprintf("%s MCP server with %d tools", server.ServerName, toolCount)
 }
 
 // writeNodeToJSON writes a ToolNode to a JSON file with pretty formatting

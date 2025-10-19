@@ -1,0 +1,25 @@
+{
+  "tools": {
+    "sampleLLM": {
+      "description": "Samples from an LLM using MCP's sampling feature",
+      "maps_to": "sampleLLM",
+      "inputSchema": {
+        "properties": {
+          "maxTokens": {
+            "default": 100,
+            "description": "Maximum number of tokens to generate",
+            "type": "number"
+          },
+          "prompt": {
+            "description": "The prompt to send to the LLM",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

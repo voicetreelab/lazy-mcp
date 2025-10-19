@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "annotatedMessage": {
+      "description": "Demonstrates how annotations can be used to provide metadata about content",
+      "maps_to": "annotatedMessage",
+      "inputSchema": {
+        "properties": {
+          "includeImage": {
+            "default": false,
+            "description": "Whether to include an example image",
+            "type": "boolean"
+          },
+          "messageType": {
+            "description": "Type of message to demonstrate different annotation patterns",
+            "enum": [
+              "error",
+              "success",
+              "debug"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "messageType"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

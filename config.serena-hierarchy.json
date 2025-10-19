@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "serena": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/myles/externals/serena",
+        "run",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "claude-code"
+      ]
+    }
+  },
+  "outputDir": "./testdata/mcp_hierarchy"
+}

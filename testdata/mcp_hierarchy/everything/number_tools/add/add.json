@@ -1,0 +1,25 @@
+{
+  "tools": {
+    "add": {
+      "description": "Adds two numbers",
+      "maps_to": "add",
+      "inputSchema": {
+        "properties": {
+          "a": {
+            "description": "First number",
+            "type": "number"
+          },
+          "b": {
+            "description": "Second number",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

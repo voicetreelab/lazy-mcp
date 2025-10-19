@@ -1,8 +1,0 @@
-{
-  "overview": "Development and coding tools for software engineering tasks",
-  "categories": {
-    "serena": "Semantic code analysis, symbol search, and intelligent editing. Use when you need to understand code structure, find definitions, or make semantic edits.",
-    "playwright": "Browser automation for testing web applications. Use when you need to interact with web pages, take screenshots, or test UI."
-  },
-  "tools": {}
-}

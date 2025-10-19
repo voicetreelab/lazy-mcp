@@ -1,0 +1,21 @@
+{
+  "tools": {
+    "structuredContent": {
+      "description": "Returns structured content along with an output schema for client data validation",
+      "maps_to": "structuredContent",
+      "inputSchema": {
+        "properties": {
+          "location": {
+            "description": "City name or zip code",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "location"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}
