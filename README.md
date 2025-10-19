@@ -1,7 +1,9 @@
 # Lazy MCP
 Lazy MCP lets your agent fetch MCP tools only on demand, saving those tokens from polluting your context window.
 
-In [[this]] example, it saved 17% (34,000 tokens) of an entire claude code context window by hiding 2 MCP tools that aren't always needed.
+In [this](https://voicetree.io/blog/lazy-mcp+for+tool+instructions+only+on+demand) example, it saved 17% (34,000 tokens) of an entire claude code context window by hiding 2 MCP tools that aren't always needed.
+
+Welcoming open source contributions!
 
 ## How it Works
 
