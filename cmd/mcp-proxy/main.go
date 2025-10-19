@@ -13,6 +13,7 @@ var BuildVersion = "dev"
 
 func main() {
 	conf := flag.String("config", "config.json", "path to config file or a http(s) url")
+	port := flag.String("port", "", "port to listen on (overrides config), e.g. '8080' or ':8080'")
 	hierarchyPath := flag.String("hierarchy", "testdata/mcp_hierarchy", "path to hierarchy directory")
 	insecure := flag.Bool("insecure", false, "allow insecure HTTPS connections by skipping TLS certificate verification")
 	expandEnv := flag.Bool("expand-env", true, "expand environment variables in config file")
@@ -34,7 +35,24 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	err = server.StartHTTPServer(cfg, *hierarchyPath)
+
+	// Override port if specified
+	if *port != "" {
+		if (*port)[0] != ':' {
+			cfg.McpProxy.Addr = ":" + *port
+		} else {
+			cfg.McpProxy.Addr = *port
+		}
+	}
+
+	// Start server based on configured type
+	switch cfg.McpProxy.Type {
+	case config.MCPServerTypeStdio:
+		err = server.StartStdioServer(cfg, *hierarchyPath)
+	default:
+		err = server.StartHTTPServer(cfg, *hierarchyPath)
+	}
+
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

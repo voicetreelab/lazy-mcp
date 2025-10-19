@@ -43,6 +43,7 @@ const (
 type MCPServerType string
 
 const (
+	MCPServerTypeStdio      MCPServerType = "stdio"
 	MCPServerTypeSSE        MCPServerType = "sse"
 	MCPServerTypeStreamable MCPServerType = "streamable-http"
 )
