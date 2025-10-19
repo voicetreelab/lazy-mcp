@@ -116,10 +116,30 @@ func LoadHierarchy(hierarchyPath string) (*Hierarchy, error) {
 			return err
 		}
 
-		// Convert directory path to dot notation
-		hierarchyKey := strings.ReplaceAll(relPath, string(filepath.Separator), ".")
-		if hierarchyKey == "." {
-			hierarchyKey = ""
+		// Get filename without extension
+		filename := strings.TrimSuffix(filepath.Base(path), ".json")
+
+		// Get the directory name
+		dirname := filepath.Base(filepath.Dir(path))
+
+		// Determine hierarchy key based on structure
+		var hierarchyKey string
+		if filename == dirname {
+			// Nested structure: directory/directory.json → use directory path only
+			// e.g., everything/everything.json → "everything"
+			hierarchyKey = strings.ReplaceAll(relPath, string(filepath.Separator), ".")
+			if hierarchyKey == "." {
+				hierarchyKey = ""
+			}
+		} else {
+			// Flat structure: directory/tool.json → use directory.tool
+			// e.g., everything/add.json → "everything.add"
+			dirKey := strings.ReplaceAll(relPath, string(filepath.Separator), ".")
+			if dirKey == "." || dirKey == "" {
+				hierarchyKey = filename
+			} else {
+				hierarchyKey = dirKey + "." + filename
+			}
 		}
 
 		node, err := loadNode(path)
