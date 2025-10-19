@@ -1,0 +1,3 @@
+{
+  "overview": "filesystem: 14 tools; create_directory -\u003e Create a new directory or ensure a directory exists., edit_file -\u003e Make line-based edits to a text file., get_file_info -\u003e Retrieve detailed metadata about a file or directory., list_tools -\u003e list_tools: 4 tools, move_file -\u003e Move or rename files and directories., read_tools -\u003e read_tools: 4 tools, search_files -\u003e Recursively search for files and directories matching a pattern., write_file -\u003e Create a new file or completely overwrite an existing file with new content."
+}

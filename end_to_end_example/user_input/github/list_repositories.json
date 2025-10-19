@@ -1,0 +1,37 @@
+{
+  "tools": {
+    "list_repositories": {
+      "title": "List Repositories",
+      "description": "List repositories for the authenticated user or organization",
+      "maps_to": "list_repositories",
+      "inputSchema": {
+        "properties": {
+          "sort": {
+            "default": "created",
+            "description": "Sort criteria",
+            "enum": [
+              "created",
+              "updated",
+              "pushed",
+              "full_name"
+            ],
+            "type": "string"
+          },
+          "type": {
+            "default": "all",
+            "description": "Type of repositories to list",
+            "enum": [
+              "all",
+              "owner",
+              "public",
+              "private",
+              "member"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+}

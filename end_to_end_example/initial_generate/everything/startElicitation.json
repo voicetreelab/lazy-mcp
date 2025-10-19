@@ -1,0 +1,28 @@
+{
+  "tools": {
+    "startElicitation": {
+      "title": "Start Elicitation",
+      "description": "Initiates an interactive elicitation flow to gather information from the user",
+      "maps_to": "startElicitation",
+      "inputSchema": {
+        "properties": {
+          "questions": {
+            "description": "List of questions to ask",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "topic": {
+            "description": "Topic to elicit information about",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

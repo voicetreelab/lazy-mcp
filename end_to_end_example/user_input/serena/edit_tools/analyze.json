@@ -1,0 +1,21 @@
+{
+  "tools": {
+    "analyze": {
+      "title": "Analyze Code",
+      "description": "Analyze code quality and suggest improvements using semantic analysis",
+      "maps_to": "analyze",
+      "inputSchema": {
+        "properties": {
+          "file": {
+            "description": "The file path to analyze",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

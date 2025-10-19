@@ -1,0 +1,29 @@
+{
+  "tools": {
+    "read_file": {
+      "description": "Read the complete contents of a file as text. DEPRECATED: Use read_text_file instead.",
+      "maps_to": "read_file",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "head": {
+            "description": "If provided, returns only the first N lines of the file",
+            "type": "number"
+          },
+          "path": {
+            "type": "string"
+          },
+          "tail": {
+            "description": "If provided, returns only the last N lines of the file",
+            "type": "number"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "tools": {
+    "create_issue": {
+      "title": "Create Issue",
+      "description": "Create a new issue in a repository",
+      "maps_to": "create_issue",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "description": "Issue description body",
+            "type": "string"
+          },
+          "labels": {
+            "description": "Labels to apply to the issue",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "owner": {
+            "description": "Repository owner username or organization",
+            "type": "string"
+          },
+          "repo": {
+            "description": "Repository name",
+            "type": "string"
+          },
+          "title": {
+            "description": "Issue title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "title"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

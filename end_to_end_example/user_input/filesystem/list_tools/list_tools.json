@@ -1,0 +1,3 @@
+{
+  "overview": "list_tools: 4 tools; directory_tree -\u003e Get a recursive tree view of files and directories as a JSON structure., list_allowed_directories -\u003e Returns the list of directories that this server is allowed to access., list_directory -\u003e Get a detailed listing of all files and directories in a specified path., list_directory_with_sizes -\u003e Get a detailed listing of all files and directories in a specified path, including sizes."
+}
