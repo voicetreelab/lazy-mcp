@@ -40,7 +40,7 @@ Lazy MCP exposes two meta tools, which allows agents to explore a tree structure
    → Returns result
 ```
 ![img_1.png](img_1.png)
-![img.png](img.png)
+![img_2.png](img_2.png)
 
 ## Quick Start
 
