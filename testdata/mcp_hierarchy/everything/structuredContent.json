@@ -3,6 +3,7 @@
     "structuredContent": {
       "description": "Returns structured content along with an output schema for client data validation",
       "maps_to": "structuredContent",
+      "server": "everything",
       "inputSchema": {
         "properties": {
           "location": {

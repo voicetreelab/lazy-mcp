@@ -182,9 +182,14 @@ func fetchFromConfig(configPath string) ([]generator.ServerTools, error) {
 func fetchToolsFromServer(ctx context.Context, name string, config ServerConfig) (generator.ServerTools, error) {
 	log.Printf("[%s] Creating stdio client: %s %v", name, config.Command, config.Args)
 
-	// Create MCP client - use empty envs like test_connection does
-	allArgs := append([]string{}, config.Args...)
-	mcpClient, err := client.NewStdioMCPClient(config.Command, []string{}, allArgs...)
+	// Expand environment variables in args
+	expandedArgs := make([]string, len(config.Args))
+	for i, arg := range config.Args {
+		expandedArgs[i] = os.ExpandEnv(arg)
+	}
+
+	// Create MCP client
+	mcpClient, err := client.NewStdioMCPClient(config.Command, []string{}, expandedArgs...)
 	if err != nil {
 		return generator.ServerTools{}, fmt.Errorf("failed to create client: %w", err)
 	}

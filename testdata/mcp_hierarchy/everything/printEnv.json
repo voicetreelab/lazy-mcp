@@ -3,6 +3,7 @@
     "printEnv": {
       "description": "Prints all environment variables, helpful for debugging MCP server configuration",
       "maps_to": "printEnv",
+      "server": "everything",
       "inputSchema": {
         "type": "object"
       }

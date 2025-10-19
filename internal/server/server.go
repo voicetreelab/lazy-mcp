@@ -211,16 +211,9 @@ func StartStdioServer(cfg *config.Config) error {
 }
 
 // StartHTTPServer starts the HTTP server with the given configuration
-func StartHTTPServer(cfg *config.Config) error {
+func StartHTTPServer(cfg *config.Config, hierarchyPath string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	// Determine hierarchy path - default to testdata/mcp_hierarchy
-	hierarchyPath := "testdata/mcp_hierarchy"
-	if cfg.McpProxy.BaseURL != "" {
-		// Could potentially support custom hierarchy path via BaseURL or new config field
-		// For now, use default
-	}
 
 	// Load hierarchy from filesystem
 	log.Printf("Loading hierarchy from %s", hierarchyPath)

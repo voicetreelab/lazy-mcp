@@ -3,6 +3,7 @@
     "sampleLLM": {
       "description": "Samples from an LLM using MCP's sampling feature",
       "maps_to": "sampleLLM",
+      "server": "everything",
       "inputSchema": {
         "properties": {
           "maxTokens": {

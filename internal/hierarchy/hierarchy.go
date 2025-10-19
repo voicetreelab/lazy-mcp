@@ -116,10 +116,30 @@ func LoadHierarchy(hierarchyPath string) (*Hierarchy, error) {
 			return err
 		}
 
-		// Convert directory path to dot notation
-		hierarchyKey := strings.ReplaceAll(relPath, string(filepath.Separator), ".")
-		if hierarchyKey == "." {
-			hierarchyKey = ""
+		// Get filename without extension
+		filename := strings.TrimSuffix(filepath.Base(path), ".json")
+
+		// Get the directory name
+		dirname := filepath.Base(filepath.Dir(path))
+
+		// Determine hierarchy key based on structure
+		var hierarchyKey string
+		if filename == dirname {
+			// Nested structure: directory/directory.json → use directory path only
+			// e.g., everything/everything.json → "everything"
+			hierarchyKey = strings.ReplaceAll(relPath, string(filepath.Separator), ".")
+			if hierarchyKey == "." {
+				hierarchyKey = ""
+			}
+		} else {
+			// Flat structure: directory/tool.json → use directory.tool
+			// e.g., everything/add.json → "everything.add"
+			dirKey := strings.ReplaceAll(relPath, string(filepath.Separator), ".")
+			if dirKey == "." || dirKey == "" {
+				hierarchyKey = filename
+			} else {
+				hierarchyKey = dirKey + "." + filename
+			}
 		}
 
 		node, err := loadNode(path)
@@ -262,12 +282,9 @@ func (h *Hierarchy) HandleGetToolsInCategory(path string) (map[string]interface{
 
 				// Aggregate tools from leaf children
 				for toolName, toolDef := range childNode.Tools {
-					var toolPath string
-					if path == "" {
-						toolPath = nodePath + "." + toolName
-					} else {
-						toolPath = path + "." + nodePath + "." + toolName
-					}
+					// In flat structure, nodePath already includes the tool name
+					// e.g., "everything.echo" not "everything.echo.echo"
+					toolPath := nodePath
 
 					aggregatedTools[toolName] = map[string]interface{}{
 						"description": toolDef.Description,
@@ -332,32 +349,42 @@ func (h *Hierarchy) ResolveToolPath(toolPath string) (*ToolDefinition, string, e
 
 	var foundTool *ToolDefinition
 
-	// Try to find the tool by progressively trying longer paths
+	// Strategy 1: Check if the full path is a node, and look for a tool with the same name as the last part
+	// e.g., "everything.echo" -> check node "everything.echo" for tool "echo"
+	lastPart := parts[len(parts)-1]
+	if node, exists := h.nodes[toolPath]; exists {
+		if tool, ok := node.Tools[lastPart]; ok {
+			foundTool = tool
+		}
+	}
+
+	// Strategy 2: Try to find the tool by progressively trying longer paths
 	// e.g., for "coding_tools.serena.search.find_symbol":
 	// - Try "coding_tools.serena.search" with tool "find_symbol"
 	// - Then "coding_tools.serena" with tool "find_symbol"
 	// - Then "coding_tools" with tool "find_symbol"
 	// - Finally "" (root) with tool "find_symbol"
+	if foundTool == nil {
+		// Start from longest path and work backwards
+		for i := len(parts) - 1; i >= 0; i-- {
+			var categoryPath string
+			var toolName string
 
-	// Start from longest path and work backwards
-	for i := len(parts) - 1; i >= 0; i-- {
-		var categoryPath string
-		var toolName string
+			if i == 0 {
+				// Single part or trying root
+				categoryPath = ""
+				toolName = parts[0]
+			} else {
+				categoryPath = strings.Join(parts[:i], ".")
+				toolName = parts[len(parts)-1]
+			}
 
-		if i == 0 {
-			// Single part or trying root
-			categoryPath = ""
-			toolName = parts[0]
-		} else {
-			categoryPath = strings.Join(parts[:i], ".")
-			toolName = parts[len(parts)-1]
-		}
-
-		if node, exists := h.nodes[categoryPath]; exists {
-			// Check if this node has the tool
-			if tool, ok := node.Tools[toolName]; ok {
-				foundTool = tool
-				break
+			if node, exists := h.nodes[categoryPath]; exists {
+				// Check if this node has the tool
+				if tool, ok := node.Tools[toolName]; ok {
+					foundTool = tool
+					break
+				}
 			}
 		}
 	}
