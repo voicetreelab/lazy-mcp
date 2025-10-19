@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/TBXark/mcp-proxy/internal/config"
-	"github.com/TBXark/mcp-proxy/internal/server"
+	"github.com/voicetreelab/lazy-mcp/internal/config"
+	"github.com/voicetreelab/lazy-mcp/internal/server"
 )
 
 var BuildVersion = "dev"
@@ -14,6 +14,7 @@ var BuildVersion = "dev"
 func main() {
 	conf := flag.String("config", "config.json", "path to config file or a http(s) url")
 	port := flag.String("port", "", "port to listen on (overrides config), e.g. '8080' or ':8080'")
+	hierarchyPath := flag.String("hierarchy", "testdata/mcp_hierarchy", "path to hierarchy directory")
 	insecure := flag.Bool("insecure", false, "allow insecure HTTPS connections by skipping TLS certificate verification")
 	expandEnv := flag.Bool("expand-env", true, "expand environment variables in config file")
 	httpHeaders := flag.String("http-headers", "", "optional HTTP headers for config URL, format: 'Key1:Value1;Key2:Value2'")
