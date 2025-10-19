@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TBXark/mcp-proxy/internal/config"
+	"github.com/voicetreelab/lazy-mcp/internal/config"
 	"github.com/TBXark/optional-go"
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"

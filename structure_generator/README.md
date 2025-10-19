@@ -309,7 +309,7 @@ Real MCP tool data in `tests/test_data/`:
 ### Programmatic Usage
 
 ```go
-import generator "github.com/TBXark/mcp-proxy/structure_generator"
+import generator "github.com/voicetreelab/lazy-mcp/structure_generator"
 
 // Load tool data
 servers := []generator.ServerTools{

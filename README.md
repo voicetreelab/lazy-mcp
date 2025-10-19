@@ -82,7 +82,7 @@ Tool hierarchy is defined in `testdata/mcp_hierarchy/` with JSON files:
 
 ## Credits
 
-Forked from [TBXark/mcp-proxy](https://github.com/TBXark/mcp-proxy) - extended with hierarchical routing, lazy loading, and stdio support.
+Forked from [TBXark/mcp-proxy](https://github.com/voicetreelab/lazy-mcp) - extended with hierarchical routing, lazy loading, and stdio support.
 
 ## License
 
