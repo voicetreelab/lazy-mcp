@@ -1,0 +1,20 @@
+{
+  "tools": {
+    "getResourceLinks": {
+      "description": "Returns multiple resource links that reference different types of resources",
+      "maps_to": "getResourceLinks",
+      "inputSchema": {
+        "properties": {
+          "count": {
+            "default": 3,
+            "description": "Number of resource links to return (1-10)",
+            "maximum": 10,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+}

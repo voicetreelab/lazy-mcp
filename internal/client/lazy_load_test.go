@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -26,6 +27,12 @@ func TestLazyLoadingFlow(t *testing.T) {
 	// This can be run manually or in CI with the servers set up
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Check for SERENA_PATH environment variable
+	serenaPath := os.Getenv("SERENA_PATH")
+	if serenaPath == "" {
+		t.Skip("SERENA_PATH environment variable not set - set it to run this test (e.g., export SERENA_PATH=/path/to/serena)")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
@@ -49,7 +56,7 @@ func TestLazyLoadingFlow(t *testing.T) {
 				Command:       "uv",
 				Args: []string{
 					"--directory",
-					"/Users/bobbobby/repos/tools/serena",
+					serenaPath,
 					"run",
 					"serena",
 					"start-mcp-server",

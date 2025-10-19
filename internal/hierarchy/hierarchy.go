@@ -16,26 +16,26 @@ import (
 )
 
 // HierarchyNode represents a node in the tool hierarchy
+// Can be a branch node (has children) or leaf node (has tools)
 type HierarchyNode struct {
-	Overview   string                    `json:"overview,omitempty"`
-	Categories map[string]string         `json:"categories,omitempty"`
-	Tools      map[string]*ToolDefinition `json:"tools,omitempty"`
-	MCPServer  *MCPServerRef             `json:"mcp_server,omitempty"`
+	Overview  string                     `json:"overview,omitempty"`
+	Tools     map[string]*ToolDefinition `json:"tools,omitempty"`
+	MCPServer *MCPServerRef              `json:"mcp_server,omitempty"`
 }
 
 // ToolDefinition represents a tool in the hierarchy
 type ToolDefinition struct {
 	Description string                 `json:"description,omitempty"`
 	MapsTo      string                 `json:"maps_to,omitempty"`
+	Server      string                 `json:"server,omitempty"`
 	InputSchema map[string]interface{} `json:"inputSchema,omitempty"`
 }
 
 // HierarchyNodeData is used for unmarshaling JSON with flexible tool types
 type HierarchyNodeData struct {
-	Overview   string                 `json:"overview,omitempty"`
-	Categories map[string]string      `json:"categories,omitempty"`
-	Tools      map[string]interface{} `json:"tools,omitempty"`
-	MCPServer  *MCPServerRef          `json:"mcp_server,omitempty"`
+	Overview  string                 `json:"overview,omitempty"`
+	Tools     map[string]interface{} `json:"tools,omitempty"`
+	MCPServer *MCPServerRef          `json:"mcp_server,omitempty"`
 }
 
 // MCPServerRef contains MCP server configuration
@@ -155,10 +155,9 @@ func loadNode(path string) (*HierarchyNode, error) {
 
 	// Convert to HierarchyNode with typed tools
 	node := &HierarchyNode{
-		Overview:   nodeData.Overview,
-		Categories: nodeData.Categories,
-		Tools:      make(map[string]*ToolDefinition),
-		MCPServer:  nodeData.MCPServer,
+		Overview:  nodeData.Overview,
+		Tools:     make(map[string]*ToolDefinition),
+		MCPServer: nodeData.MCPServer,
 	}
 
 	// Parse tools - can be either map[string]interface{} or direct ToolDefinition
@@ -173,6 +172,9 @@ func loadNode(path string) (*HierarchyNode, error) {
 			} else {
 				// Default maps_to is the tool name itself
 				tool.MapsTo = toolName
+			}
+			if server, ok := toolMap["server"].(string); ok {
+				tool.Server = server
 			}
 			if schema, ok := toolMap["inputSchema"].(map[string]interface{}); ok {
 				tool.InputSchema = schema
@@ -192,7 +194,7 @@ func (h *Hierarchy) GetRootNode() *HierarchyNode {
 }
 
 // HandleGetToolsInCategory handles the get_tools_in_category meta-tool
-// Returns a map with path, overview, categories, and tools
+// Returns a map with path, overview, children info, and tools
 func (h *Hierarchy) HandleGetToolsInCategory(path string) (map[string]interface{}, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -218,12 +220,79 @@ func (h *Hierarchy) HandleGetToolsInCategory(path string) (map[string]interface{
 		response["overview"] = node.Overview
 	}
 
-	if len(node.Categories) > 0 {
-		response["categories"] = node.Categories
+	// Find child nodes
+	children := make(map[string]interface{})
+	allChildrenAreLeaves := true
+	aggregatedTools := make(map[string]interface{})
+
+	for nodePath := range h.nodes {
+		if nodePath == path || nodePath == "" {
+			continue
+		}
+
+		// Check if this node is a direct child of the current path
+		var isDirectChild bool
+		var childName string
+
+		if path == "" {
+			// Root level - direct children have no dots
+			if !strings.Contains(nodePath, ".") {
+				isDirectChild = true
+				childName = nodePath
+			}
+		} else {
+			// Non-root - check if path is a prefix and child is one level deeper
+			if strings.HasPrefix(nodePath, path+".") {
+				remainder := strings.TrimPrefix(nodePath, path+".")
+				if !strings.Contains(remainder, ".") {
+					isDirectChild = true
+					childName = remainder
+				}
+			}
+		}
+
+		if isDirectChild {
+			childNode := h.nodes[nodePath]
+			if len(childNode.Tools) > 0 {
+				// Leaf node
+				children[childName] = map[string]interface{}{
+					"is_leaf":    true,
+					"tool_count": len(childNode.Tools),
+				}
+
+				// Aggregate tools from leaf children
+				for toolName, toolDef := range childNode.Tools {
+					var toolPath string
+					if path == "" {
+						toolPath = nodePath + "." + toolName
+					} else {
+						toolPath = path + "." + nodePath + "." + toolName
+					}
+
+					aggregatedTools[toolName] = map[string]interface{}{
+						"description": toolDef.Description,
+						"tool_path":   toolPath,
+					}
+				}
+			} else {
+				// Branch node
+				allChildrenAreLeaves = false
+				childInfo := map[string]interface{}{}
+				if childNode.Overview != "" {
+					childInfo["overview"] = childNode.Overview
+				}
+				children[childName] = childInfo
+			}
+		}
 	}
 
+	if len(children) > 0 {
+		response["children"] = children
+	}
+
+	// If this node has direct tools or all children are leaves, include tools
 	if len(node.Tools) > 0 {
-		// Build tool info with full paths
+		// Node has direct tools
 		toolsInfo := make(map[string]interface{})
 		for toolName, toolDef := range node.Tools {
 			var toolPath string
@@ -239,6 +308,9 @@ func (h *Hierarchy) HandleGetToolsInCategory(path string) (map[string]interface{
 			}
 		}
 		response["tools"] = toolsInfo
+	} else if allChildrenAreLeaves && len(aggregatedTools) > 0 {
+		// All children are leaves - include their tools
+		response["tools"] = aggregatedTools
 	} else {
 		response["tools"] = make(map[string]interface{})
 	}
@@ -246,21 +318,19 @@ func (h *Hierarchy) HandleGetToolsInCategory(path string) (map[string]interface{
 	return response, nil
 }
 
-// ResolveToolPath resolves a tool path to its definition and server config
-// Returns the tool definition, server config (may be nil for meta-tools), and any error
-func (h *Hierarchy) ResolveToolPath(toolPath string) (*ToolDefinition, *config.MCPClientConfigV2, error) {
+// ResolveToolPath resolves a tool path to its definition and server name
+// Returns the tool definition, server name (empty for meta-tools or if not configured), and any error
+func (h *Hierarchy) ResolveToolPath(toolPath string) (*ToolDefinition, string, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	// Parse the tool path
 	parts := strings.Split(toolPath, ".")
 	if len(parts) == 0 {
-		return nil, nil, fmt.Errorf("invalid tool path: %s", toolPath)
+		return nil, "", fmt.Errorf("invalid tool path: %s", toolPath)
 	}
 
 	var foundTool *ToolDefinition
-	var serverConfig *config.MCPClientConfigV2
-	var foundAtPath string
 
 	// Try to find the tool by progressively trying longer paths
 	// e.g., for "coding_tools.serena.search.find_symbol":
@@ -287,51 +357,33 @@ func (h *Hierarchy) ResolveToolPath(toolPath string) (*ToolDefinition, *config.M
 			// Check if this node has the tool
 			if tool, ok := node.Tools[toolName]; ok {
 				foundTool = tool
-				foundAtPath = categoryPath
 				break
 			}
 		}
 	}
 
 	if foundTool == nil {
-		return nil, nil, fmt.Errorf("tool not found: %s", toolPath)
+		return nil, "", fmt.Errorf("tool not found: %s", toolPath)
 	}
 
-	// Find the server config by walking up from where we found the tool
-	// First check the node where we found the tool
-	if node, exists := h.nodes[foundAtPath]; exists && node.MCPServer != nil {
-		serverConfig = node.MCPServer.ToClientConfig()
-	} else {
-		// Search parent paths for server config
-		if foundAtPath != "" {
-			parts := strings.Split(foundAtPath, ".")
-			for i := len(parts); i >= 1; i-- {
-				parentPath := strings.Join(parts[:i], ".")
-				if node, exists := h.nodes[parentPath]; exists && node.MCPServer != nil {
-					serverConfig = node.MCPServer.ToClientConfig()
-					break
-				}
-			}
-		}
-	}
-
-	return foundTool, serverConfig, nil
+	// Return the tool and its server name (from the tool-level server field)
+	return foundTool, foundTool.Server, nil
 }
 
 // HandleExecuteTool handles the execute_tool meta-tool
 func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegistry, toolPath string, arguments map[string]interface{}) (*mcp.CallToolResult, error) {
-	// Resolve the tool path to get tool definition and server config
-	toolDef, serverConfig, err := h.ResolveToolPath(toolPath)
+	// Resolve the tool path to get tool definition and server name
+	toolDef, serverName, err := h.ResolveToolPath(toolPath)
 	if err != nil {
 		return nil, err
 	}
 
-	if serverConfig == nil {
+	if serverName == "" {
 		return nil, fmt.Errorf("no MCP server configured for tool: %s", toolPath)
 	}
 
 	// Get or load the MCP client for this server
-	client, err := registry.GetOrLoadServer(ctx, serverConfig.Command, serverConfig)
+	client, err := registry.GetOrLoadServer(ctx, serverName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get MCP client: %w", err)
 	}
@@ -342,7 +394,7 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 		actualToolName = strings.Split(toolPath, ".")[len(strings.Split(toolPath, "."))-1]
 	}
 
-	log.Printf("Executing tool: hierarchy_path=%s, tool=%s", toolPath, actualToolName)
+	log.Printf("Executing tool: hierarchy_path=%s, server=%s, tool=%s", toolPath, serverName, actualToolName)
 
 	// Call the tool on the actual MCP server
 	callRequest := mcp.CallToolRequest{}
@@ -359,23 +411,25 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 
 // ServerRegistry manages MCP client connections
 type ServerRegistry struct {
-	clients map[string]*client.Client
-	mu      sync.RWMutex
+	clients       map[string]*client.Client
+	serverConfigs map[string]*config.MCPClientConfigV2
+	mu            sync.RWMutex
 }
 
-// NewServerRegistry creates a new server registry
-func NewServerRegistry() *ServerRegistry {
+// NewServerRegistry creates a new server registry with server configurations
+func NewServerRegistry(serverConfigs map[string]*config.MCPClientConfigV2) *ServerRegistry {
 	return &ServerRegistry{
-		clients: make(map[string]*client.Client),
+		clients:       make(map[string]*client.Client),
+		serverConfigs: serverConfigs,
 	}
 }
 
 // GetOrLoadServer gets an existing client or creates and initializes a new one
 // This implements lazy loading - servers are only started when first accessed
-func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, name string, cfg *config.MCPClientConfigV2) (*client.Client, error) {
+func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, serverName string) (*client.Client, error) {
 	// First check with read lock
 	r.mu.RLock()
-	if client, exists := r.clients[name]; exists {
+	if client, exists := r.clients[serverName]; exists {
 		r.mu.RUnlock()
 		return client, nil
 	}
@@ -386,12 +440,18 @@ func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, name string, cfg *
 	defer r.mu.Unlock()
 
 	// Check again in case another goroutine created it
-	if client, exists := r.clients[name]; exists {
+	if client, exists := r.clients[serverName]; exists {
 		return client, nil
 	}
 
+	// Look up the server config
+	cfg, exists := r.serverConfigs[serverName]
+	if !exists {
+		return nil, fmt.Errorf("server config not found: %s", serverName)
+	}
+
 	// Create the MCP client
-	mcpClient, err := client.NewMCPClient(name, cfg)
+	mcpClient, err := client.NewMCPClient(serverName, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MCP client: %w", err)
 	}
@@ -415,10 +475,10 @@ func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, name string, cfg *
 		return nil, fmt.Errorf("failed to initialize MCP client: %w", err)
 	}
 
-	log.Printf("Created and initialized MCP client for server: %s", name)
+	log.Printf("Created and initialized MCP client for server: %s", serverName)
 
 	// Store the client
-	r.clients[name] = mcpClient
+	r.clients[serverName] = mcpClient
 
 	// Start ping task if needed
 	if mcpClient.NeedPing() {

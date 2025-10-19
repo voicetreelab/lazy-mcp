@@ -3,6 +3,7 @@ package hierarchy
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -29,9 +30,6 @@ func TestLoadHierarchy_Phase2(t *testing.T) {
 		rootNode := hierarchy.nodes[""]
 		require.NotNil(t, rootNode, "Root node should exist")
 		assert.NotEmpty(t, rootNode.Overview, "Root should have overview")
-		assert.NotEmpty(t, rootNode.Categories, "Root should have categories")
-		assert.Contains(t, rootNode.Categories, "coding_tools", "Should have coding_tools category")
-		assert.Contains(t, rootNode.Categories, "web_tools", "Should have web_tools category")
 
 		// Verify root tools (meta-tools)
 		assert.NotEmpty(t, rootNode.Tools, "Root should have tools")
@@ -42,8 +40,6 @@ func TestLoadHierarchy_Phase2(t *testing.T) {
 		codingToolsNode := hierarchy.nodes["coding_tools"]
 		require.NotNil(t, codingToolsNode, "coding_tools node should exist")
 		assert.NotEmpty(t, codingToolsNode.Overview, "coding_tools should have overview")
-		assert.Contains(t, codingToolsNode.Categories, "serena", "coding_tools should have serena category")
-		assert.Contains(t, codingToolsNode.Categories, "playwright", "coding_tools should have playwright category")
 
 		// Verify serena node
 		serenaNode := hierarchy.nodes["coding_tools.serena"]
@@ -78,6 +74,12 @@ func TestServerRegistry_Phase2(t *testing.T) {
 	}
 
 	t.Run("GetOrLoadServer loads server on first call", func(t *testing.T) {
+		// Check for SERENA_PATH environment variable
+		serenaPath := os.Getenv("SERENA_PATH")
+		if serenaPath == "" {
+			t.Skip("SERENA_PATH environment variable not set - set it to run this test (e.g., export SERENA_PATH=/path/to/serena)")
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
@@ -89,7 +91,7 @@ func TestServerRegistry_Phase2(t *testing.T) {
 			Command:       "uv",
 			Args: []string{
 				"--directory",
-				"/Users/bobbobby/repos/tools/serena",
+				serenaPath,
 				"run",
 				"serena",
 				"start-mcp-server",
@@ -152,9 +154,8 @@ func TestHandleGetToolsInCategory_Phase2(t *testing.T) {
 		assert.Equal(t, "", result["path"])
 		assert.NotEmpty(t, result["overview"])
 
-		categories := result["categories"].(map[string]string)
-		assert.Contains(t, categories, "coding_tools")
-		assert.Contains(t, categories, "web_tools")
+		children := result["children"].(map[string]interface{})
+		assert.Contains(t, children, "coding_tools")
 
 		tools := result["tools"].(map[string]interface{})
 		assert.Contains(t, tools, "get_tools_in_category")
@@ -174,11 +175,11 @@ func TestHandleGetToolsInCategory_Phase2(t *testing.T) {
 		assert.Equal(t, "coding_tools", result["path"])
 		assert.NotEmpty(t, result["overview"])
 
-		categories := result["categories"].(map[string]string)
-		assert.Contains(t, categories, "serena")
-		assert.Contains(t, categories, "playwright")
+		children := result["children"].(map[string]interface{})
+		assert.Contains(t, children, "serena")
+		assert.Contains(t, children, "playwright")
 
-		t.Logf("Coding tools has %d categories", len(categories))
+		t.Logf("Coding tools has %d children", len(children))
 	})
 
 	t.Run("Get serena structure", func(t *testing.T) {
@@ -189,9 +190,9 @@ func TestHandleGetToolsInCategory_Phase2(t *testing.T) {
 		assert.Equal(t, "coding_tools.serena", result["path"])
 		assert.NotEmpty(t, result["overview"])
 
-		categories := result["categories"].(map[string]string)
-		assert.Contains(t, categories, "search")
-		assert.Contains(t, categories, "edit")
+		children := result["children"].(map[string]interface{})
+		assert.Contains(t, children, "search")
+		assert.Contains(t, children, "edit")
 
 		tools := result["tools"].(map[string]interface{})
 		assert.Contains(t, tools, "get_symbols_overview")
@@ -215,10 +216,10 @@ func TestHandleGetToolsInCategory_Phase2(t *testing.T) {
 		assert.Equal(t, "coding_tools.serena.search", result["path"])
 		assert.NotEmpty(t, result["overview"])
 
-		categories := result["categories"].(map[string]string)
-		assert.Contains(t, categories, "search_symbol")
+		children := result["children"].(map[string]interface{})
+		assert.Contains(t, children, "search_symbol")
 
-		t.Logf("Search category has %d subcategories", len(categories))
+		t.Logf("Search category has %d subcategories", len(children))
 	})
 
 	t.Run("Invalid path returns error", func(t *testing.T) {
@@ -368,6 +369,12 @@ func TestThreadSafety_Phase2(t *testing.T) {
 	}
 
 	t.Run("Concurrent GetOrLoadServer calls", func(t *testing.T) {
+		// Check for SERENA_PATH environment variable
+		serenaPath := os.Getenv("SERENA_PATH")
+		if serenaPath == "" {
+			t.Skip("SERENA_PATH environment variable not set - set it to run this test (e.g., export SERENA_PATH=/path/to/serena)")
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 		defer cancel()
 
@@ -377,7 +384,7 @@ func TestThreadSafety_Phase2(t *testing.T) {
 			Command:       "uv",
 			Args: []string{
 				"--directory",
-				"/Users/bobbobby/repos/tools/serena",
+				serenaPath,
 				"run",
 				"serena",
 				"start-mcp-server",

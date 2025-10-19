@@ -1,0 +1,23 @@
+{
+  "tools": {
+    "longRunningOperation": {
+      "description": "Demonstrates a long running operation with progress updates",
+      "maps_to": "longRunningOperation",
+      "inputSchema": {
+        "properties": {
+          "duration": {
+            "default": 10,
+            "description": "Duration of the operation in seconds",
+            "type": "number"
+          },
+          "steps": {
+            "default": 5,
+            "description": "Number of steps in the operation",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+}

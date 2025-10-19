@@ -1,0 +1,22 @@
+{
+  "tools": {
+    "getResourceReference": {
+      "description": "Returns a resource reference that can be used by MCP clients",
+      "maps_to": "getResourceReference",
+      "inputSchema": {
+        "properties": {
+          "resourceId": {
+            "description": "ID of the resource to reference (1-100)",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "resourceId"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

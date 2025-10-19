@@ -1,0 +1,11 @@
+{
+  "tools": {
+    "getTinyImage": {
+      "description": "Returns the MCP_TINY_IMAGE",
+      "maps_to": "getTinyImage",
+      "inputSchema": {
+        "type": "object"
+      }
+    }
+  }
+}

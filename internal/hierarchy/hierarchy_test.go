@@ -63,28 +63,28 @@ func TestLoadHierarchyStructure(t *testing.T) {
 	}
 }
 
-// TestLoadHierarchyCategoryDescriptions tests that categories are loaded with descriptions
-func TestLoadHierarchyCategoryDescriptions(t *testing.T) {
+// TestLoadHierarchyStructureOverviews tests that overviews are loaded correctly
+func TestLoadHierarchyStructureOverviews(t *testing.T) {
 	hierarchyPath, err := filepath.Abs("../../testdata/mcp_hierarchy")
 	require.NoError(t, err)
 
 	h, err := LoadHierarchy(hierarchyPath)
 	require.NoError(t, err)
 
-	// Check root categories
+	// Check branch nodes have overviews
 	rootNode := h.nodes[""]
-	assert.Contains(t, rootNode.Categories, "coding_tools")
-	assert.Contains(t, rootNode.Categories, "web_tools")
+	assert.NotEmpty(t, rootNode.Overview, "root should have overview")
 
-	// Check coding_tools categories
 	codingTools := h.nodes["coding_tools"]
-	assert.Contains(t, codingTools.Categories, "serena")
-	assert.Contains(t, codingTools.Categories, "playwright")
+	assert.NotEmpty(t, codingTools.Overview, "coding_tools should have overview")
 
-	// Check serena categories
 	serena := h.nodes["coding_tools.serena"]
-	assert.Contains(t, serena.Categories, "search")
-	assert.Contains(t, serena.Categories, "edit")
+	assert.NotEmpty(t, serena.Overview, "serena should have overview")
+
+	// Check leaf nodes don't have overviews but have tools
+	edit := h.nodes["coding_tools.serena.edit"]
+	assert.Empty(t, edit.Overview, "edit leaf node should not have overview")
+	assert.NotEmpty(t, edit.Tools, "edit leaf node should have tools")
 }
 
 // TestLoadHierarchyTools tests that tools are loaded correctly
@@ -155,7 +155,7 @@ func TestLoadHierarchyServerConfigs(t *testing.T) {
 	require.NotNil(t, serena.MCPServer, "serena should have server config")
 	assert.Equal(t, "serena", serena.MCPServer.Name)
 	assert.Equal(t, "stdio", serena.MCPServer.Type)
-	assert.Equal(t, "uv", serena.MCPServer.Command)
+	assert.Equal(t, "serena", serena.MCPServer.Command)
 	assert.NotEmpty(t, serena.MCPServer.Args)
 
 	// Playwright should have server config
@@ -193,12 +193,11 @@ func TestHandleGetToolsInCategory(t *testing.T) {
 			wantErr: false,
 			checkResponse: func(t *testing.T, response map[string]interface{}) {
 				assert.Contains(t, response, "overview")
-				assert.Contains(t, response, "categories")
+				assert.Contains(t, response, "children")
 				assert.Contains(t, response, "tools")
 
-				categories := response["categories"].(map[string]string)
-				assert.Contains(t, categories, "coding_tools")
-				assert.Contains(t, categories, "web_tools")
+				children := response["children"].(map[string]interface{})
+				assert.Contains(t, children, "coding_tools")
 			},
 		},
 		{
@@ -206,9 +205,9 @@ func TestHandleGetToolsInCategory(t *testing.T) {
 			path:    "/",
 			wantErr: false,
 			checkResponse: func(t *testing.T, response map[string]interface{}) {
-				assert.Contains(t, response, "categories")
-				categories := response["categories"].(map[string]string)
-				assert.Contains(t, categories, "coding_tools")
+				assert.Contains(t, response, "children")
+				children := response["children"].(map[string]interface{})
+				assert.Contains(t, children, "coding_tools")
 			},
 		},
 		{
@@ -217,19 +216,19 @@ func TestHandleGetToolsInCategory(t *testing.T) {
 			wantErr: false,
 			checkResponse: func(t *testing.T, response map[string]interface{}) {
 				assert.Contains(t, response, "overview")
-				categories := response["categories"].(map[string]string)
-				assert.Contains(t, categories, "serena")
-				assert.Contains(t, categories, "playwright")
+				children := response["children"].(map[string]interface{})
+				assert.Contains(t, children, "serena")
+				assert.Contains(t, children, "playwright")
 			},
 		},
 		{
-			name:    "serena with tools and categories",
+			name:    "serena with tools and children",
 			path:    "coding_tools.serena",
 			wantErr: false,
 			checkResponse: func(t *testing.T, response map[string]interface{}) {
 				assert.Contains(t, response, "overview")
 				assert.Contains(t, response, "tools")
-				assert.Contains(t, response, "categories")
+				assert.Contains(t, response, "children")
 
 				tools := response["tools"].(map[string]interface{})
 				assert.Contains(t, tools, "get_symbols_overview")
@@ -239,19 +238,22 @@ func TestHandleGetToolsInCategory(t *testing.T) {
 				symbolTool := tools["get_symbols_overview"].(map[string]interface{})
 				assert.Equal(t, "coding_tools.serena.get_symbols_overview", symbolTool["tool_path"])
 
-				categories := response["categories"].(map[string]string)
-				assert.Contains(t, categories, "search")
-				assert.Contains(t, categories, "edit")
+				children := response["children"].(map[string]interface{})
+				assert.Contains(t, children, "search")
+				assert.Contains(t, children, "edit")
 			},
 		},
 		{
-			name:    "search category",
+			name:    "search category - parent of leaves",
 			path:    "coding_tools.serena.search",
 			wantErr: false,
 			checkResponse: func(t *testing.T, response map[string]interface{}) {
-				categories := response["categories"].(map[string]string)
-				assert.Contains(t, categories, "search_symbol")
-				assert.Contains(t, categories, "find_references")
+				children := response["children"].(map[string]interface{})
+				assert.Contains(t, children, "search_symbol")
+
+				// Should include tools from leaf children
+				tools := response["tools"].(map[string]interface{})
+				assert.NotEmpty(t, tools, "parent of leaves should include aggregated tools")
 			},
 		},
 		{
@@ -320,7 +322,7 @@ func TestResolveToolPath(t *testing.T) {
 			wantServerNil: false,
 			checkServer: func(t *testing.T, cfg *config.MCPClientConfigV2) {
 				assert.Equal(t, config.MCPClientTypeStdio, cfg.TransportType)
-				assert.Equal(t, "uv", cfg.Command)
+				assert.Equal(t, "serena", cfg.Command)
 			},
 		},
 		{
@@ -331,7 +333,7 @@ func TestResolveToolPath(t *testing.T) {
 			wantServerNil: false,
 			checkServer: func(t *testing.T, cfg *config.MCPClientConfigV2) {
 				assert.Equal(t, config.MCPClientTypeStdio, cfg.TransportType)
-				assert.Equal(t, "uv", cfg.Command)
+				assert.Equal(t, "serena", cfg.Command)
 			},
 		},
 		{
@@ -341,7 +343,7 @@ func TestResolveToolPath(t *testing.T) {
 			wantMapsTo:    "replace_symbol_body",
 			wantServerNil: false,
 			checkServer: func(t *testing.T, cfg *config.MCPClientConfigV2) {
-				assert.Equal(t, "uv", cfg.Command)
+				assert.Equal(t, "serena", cfg.Command)
 			},
 		},
 		{

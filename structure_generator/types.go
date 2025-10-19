@@ -20,20 +20,17 @@ type ServerTools struct {
 }
 
 // ToolNode represents a node in the hierarchical tool structure
-// Can be a category, server, feature group, or individual tool
+// Can be a branch node (has children) or leaf node (has tools)
 type ToolNode struct {
 	// Path is the fully qualified path (e.g., "coding_tools.serena.search")
 	Path string `json:"path"`
 
 	// Overview is a concise description of this node
-	Overview string `json:"overview"`
-
-	// Categories maps subcategory names to their descriptions
-	// Optional - only present if this node has subcategories
-	Categories map[string]string `json:"categories,omitempty"`
+	// Only present for branch nodes - leaf nodes use tool descriptions instead
+	Overview string `json:"overview,omitempty"`
 
 	// Tools maps tool names to their full definitions
-	// Optional - only present if this node has tools
+	// Only present for leaf nodes
 	Tools map[string]ToolDefinition `json:"tools,omitempty"`
 }
 
@@ -41,7 +38,8 @@ type ToolNode struct {
 type ToolDefinition struct {
 	Title        string                 `json:"title,omitempty"`
 	Description  string                 `json:"description,omitempty"`
-	InputSchema  map[string]interface{} `json:"inputSchema"`
+	MapsTo       string                 `json:"maps_to,omitempty"`        // Maps to actual MCP tool name
+	InputSchema  map[string]interface{} `json:"inputSchema,omitempty"`
 	OutputSchema map[string]interface{} `json:"outputSchema,omitempty"`
 	Annotations  map[string]interface{} `json:"annotations,omitempty"`
 }
@@ -132,17 +130,18 @@ func DefaultGeneratorConfig() GeneratorConfig {
 // MarshalJSON implements custom JSON marshaling for ToolNode
 func (n *ToolNode) MarshalJSON() ([]byte, error) {
 	// Create a map to omit path from JSON output
-	output := map[string]interface{}{
-		"overview": n.Overview,
+	output := map[string]interface{}{}
+
+	// Only include overview if present (branch nodes)
+	if n.Overview != "" {
+		output["overview"] = n.Overview
 	}
 
-	if len(n.Categories) > 0 {
-		output["categories"] = n.Categories
-	}
-
-	if len(n.Tools) > 0 {
+	// Only include tools if present (leaf nodes)
+	if n.Tools != nil && len(n.Tools) > 0 {
 		output["tools"] = n.Tools
 	}
 
-	return json.MarshalIndent(output, "", "  ")
+	// Return un-indented JSON - let the encoder handle indentation
+	return json.Marshal(output)
 }

@@ -66,6 +66,12 @@ docker run -d -p 9090:9090 -v /path/to/config.json:/config/config.json ghcr.io/t
 
 Tool hierarchy configured in `testdata/mcp_hierarchy/` with JSON files defining categories, tools, and MCP server configs.
 
+**Environment Variables**: Use `${VAR_NAME}` in config files for dynamic paths:
+```bash
+export SERENA_PATH="/path/to/your/serena"
+./build/mcp-proxy --config config.lazy-load.json
+```
+
 See [docs/configuration.md](docs/CONFIGURATION.md) for details.
 
 ## Documentation

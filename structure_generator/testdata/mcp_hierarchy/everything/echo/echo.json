@@ -1,0 +1,20 @@
+{
+  "tools": {
+    "echo": {
+      "description": "Echoes back the input",
+      "maps_to": "echo",
+      "inputSchema": {
+        "properties": {
+          "message": {
+            "description": "Message to echo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

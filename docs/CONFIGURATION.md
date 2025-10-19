@@ -19,6 +19,28 @@
 }
 ```
 
+## Environment Variables
+
+The config file supports environment variable expansion (enabled by default with `-expand-env`). Use `${VAR_NAME}` syntax:
+
+```json
+{
+  "mcpServers": {
+    "serena": {
+      "command": "uv",
+      "args": ["--directory", "${SERENA_PATH}", "run", "serena", "start-mcp-server"],
+      "env": {}
+    }
+  }
+}
+```
+
+Then set the environment variable:
+```bash
+export SERENA_PATH="/path/to/your/serena"
+./build/mcp-proxy --config config.json
+```
+
 ## mcpProxy
 
 - `baseURL`: Public URL base for client endpoints

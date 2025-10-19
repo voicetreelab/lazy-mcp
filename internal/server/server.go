@@ -115,15 +115,12 @@ func StartHTTPServer(cfg *config.Config) error {
 	)
 
 	// Register get_tools_in_category meta-tool
-	// Build description with root categories
-	description := "Navigate the tool hierarchy and discover available tools in a category. Returns categories, subcategories, and tools at the specified path."
+	// Build description from root overview
+	description := "Navigate the tool hierarchy and discover available tools in a category. Returns children, and tools at the specified path."
 
-	// Get root node and inject available categories
-	if rootNode := h.GetRootNode(); rootNode != nil && len(rootNode.Categories) > 0 {
-		description += "\n\nAvailable root categories:"
-		for catName, catDesc := range rootNode.Categories {
-			description += fmt.Sprintf("\n- %s: %s", catName, catDesc)
-		}
+	// Get root node and use its overview
+	if rootNode := h.GetRootNode(); rootNode != nil && rootNode.Overview != "" {
+		description += fmt.Sprintf("\n\n%s", rootNode.Overview)
 	}
 
 	getToolsInCategoryTool := mcp.Tool{
