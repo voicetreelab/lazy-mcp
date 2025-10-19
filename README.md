@@ -40,6 +40,8 @@ Lazy MCP exposes two meta tools, which allows agents to explore a tree structure
    → Returns result
 ```
 
+![img.png](img.png)
+
 ## Quick Start
 
 ```bash

@@ -12,7 +12,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
-	generator "github.com/TBXark/mcp-proxy/structure_generator"
+	generator "github.com/voicetreelab/lazy-mcp/structure_generator"
 )
 
 type arrayFlags []string

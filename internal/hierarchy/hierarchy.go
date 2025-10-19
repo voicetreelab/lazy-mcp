@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TBXark/mcp-proxy/internal/client"
-	"github.com/TBXark/mcp-proxy/internal/config"
+	"github.com/voicetreelab/lazy-mcp/internal/client"
+	"github.com/voicetreelab/lazy-mcp/internal/config"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 

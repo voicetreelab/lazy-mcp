@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TBXark/mcp-proxy/internal/config"
-	"github.com/TBXark/mcp-proxy/internal/hierarchy"
+	"github.com/voicetreelab/lazy-mcp/internal/config"
+	"github.com/voicetreelab/lazy-mcp/internal/hierarchy"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

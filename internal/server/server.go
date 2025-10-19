@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/TBXark/mcp-proxy/internal/config"
-	"github.com/TBXark/mcp-proxy/internal/hierarchy"
+	"github.com/voicetreelab/lazy-mcp/internal/config"
+	"github.com/voicetreelab/lazy-mcp/internal/hierarchy"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -106,7 +106,7 @@ func StartStdioServer(cfg *config.Config) error {
 
 	// Register get_tools_in_category meta-tool
 	// Build description from root overview
-	description := "Navigate the tool hierarchy and discover available tools in a category. Returns children, and tools at the specified path."
+	description := "You have MCP tools hidden within categories. You MUST use get_tools_in_category to learn more about what available tools you have within these categories. Returns children categories, and tools at the specified path. Call initially with an empty string to get root categories."
 
 	// Get root node and use its overview
 	if rootNode := h.GetRootNode(); rootNode != nil && rootNode.Overview != "" {
@@ -237,7 +237,7 @@ func StartHTTPServer(cfg *config.Config) error {
 
 	// Register get_tools_in_category meta-tool
 	// Build description from root overview
-	description := "Navigate the tool hierarchy and discover available tools in a category. Returns children, and tools at the specified path."
+	description := "You have MCP tools hidden within categories. You MUST use get_tools_in_category to learn more about what available tools you have within these categories. Returns children categories, and tools at the specified path. Call initially with an empty string to get root categories."
 
 	// Get root node and use its overview
 	if rootNode := h.GetRootNode(); rootNode != nil && rootNode.Overview != "" {
