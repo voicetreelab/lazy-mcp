@@ -1,0 +1,18 @@
+{
+  "tools": {
+    "printEnv": {
+      "title": "Print Environment",
+      "description": "Prints environment variables for debugging purposes",
+      "maps_to": "printEnv",
+      "inputSchema": {
+        "properties": {
+          "variable": {
+            "description": "Specific environment variable to print, or omit for all",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+}

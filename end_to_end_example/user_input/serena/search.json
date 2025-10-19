@@ -1,0 +1,21 @@
+{
+  "tools": {
+    "search": {
+      "title": "Search Code",
+      "description": "Search for code patterns in the codebase using semantic search with LSP integration",
+      "maps_to": "search",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "description": "The search query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

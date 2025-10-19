@@ -1,0 +1,21 @@
+{
+  "tools": {
+    "getResourceReference": {
+      "title": "Get Resource Reference",
+      "description": "Returns references to MCP resources for testing resource linking",
+      "maps_to": "getResourceReference",
+      "inputSchema": {
+        "properties": {
+          "resourceId": {
+            "description": "ID of the resource to reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resourceId"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

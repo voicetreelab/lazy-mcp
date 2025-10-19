@@ -1,0 +1,24 @@
+{
+  "tools": {
+    "getTinyImage": {
+      "title": "Get Tiny Image",
+      "description": "Returns a small test image for testing binary content handling",
+      "maps_to": "getTinyImage",
+      "inputSchema": {
+        "properties": {
+          "format": {
+            "default": "png",
+            "description": "Image format to return",
+            "enum": [
+              "png",
+              "jpg",
+              "gif"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+}
