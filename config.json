@@ -1,52 +1,68 @@
 {
   "mcpProxy": {
-    "baseURL": "https://mcp.example.com",
+    "baseURL": "http://localhost",
     "addr": ":9090",
-    "name": "MCP Proxy",
+    "name": "MCP Lazy Load Proxy - End to End Example",
     "version": "1.0.0",
-    "type": "streamable-http",
+    "type": "stdio",
     "options": {
-      "panicIfInvalid": false,
-      "logEnabled": true,
-      "authTokens": [
-        "DefaultTokens"
-      ]
+      "lazyLoad": true
     }
   },
   "mcpServers": {
+    "serena": {
+      "transportType": "stdio",
+      "command": "uvx",
+      "args": [
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "claude-code"
+      ],
+      "env": {},
+      "options": {
+        "lazyLoad": true
+      }
+    },
     "github": {
+      "transportType": "stdio",
       "command": "npx",
       "args": [
         "-y",
         "@modelcontextprotocol/server-github"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       },
       "options": {
-        "toolFilter": {
-          "mode": "block",
-          "list": [
-            "create_or_update_file"
-          ]
-        }
+        "lazyLoad": true
       }
     },
-    "fetch": {
-      "command": "uvx",
+    "filesystem": {
+      "transportType": "stdio",
+      "command": "npx",
       "args": [
-        "mcp-server-fetch"
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${HOME}/repos",
+        "${HOME}/Documents"
       ],
+      "env": {},
       "options": {
-        "panicIfInvalid": true,
-        "logEnabled": false,
-        "authTokens": [
-          "SpecificTokens"
-        ]
+        "lazyLoad": true
       }
     },
-    "amap": {
-      "url": "https://mcp.amap.com/sse?key=<YOUR_TOKEN>"
+    "everything": {
+      "transportType": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-everything"
+      ],
+      "env": {},
+      "options": {
+        "lazyLoad": true
+      }
     }
   }
 }
