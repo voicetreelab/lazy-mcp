@@ -72,12 +72,13 @@ type OptionsV2 struct {
 }
 
 type MCPProxyConfigV2 struct {
-	BaseURL string        `json:"baseURL"`
-	Addr    string        `json:"addr"`
-	Name    string        `json:"name"`
-	Version string        `json:"version"`
-	Type    MCPServerType `json:"type,omitempty"`
-	Options *OptionsV2    `json:"options,omitempty"`
+	BaseURL       string        `json:"baseURL"`
+	Addr          string        `json:"addr"`
+	Name          string        `json:"name"`
+	Version       string        `json:"version"`
+	Type          MCPServerType `json:"type,omitempty"`
+	HierarchyPath string        `json:"hierarchyPath,omitempty"`
+	Options       *OptionsV2    `json:"options,omitempty"`
 }
 
 type MCPClientConfigV2 struct {

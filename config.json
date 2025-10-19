@@ -5,6 +5,7 @@
     "name": "MCP Lazy Load Proxy - End to End Example",
     "version": "1.0.0",
     "type": "stdio",
+    "hierarchyPath": "testdata/mcp_hierarchy",
     "options": {
       "lazyLoad": true
     }
