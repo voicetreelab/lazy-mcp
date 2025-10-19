@@ -76,16 +76,9 @@ func recoverMiddleware(prefix string) MiddlewareFunc {
 }
 
 // StartHTTPServer starts the HTTP server with the given configuration
-func StartHTTPServer(cfg *config.Config) error {
+func StartHTTPServer(cfg *config.Config, hierarchyPath string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	// Determine hierarchy path - default to testdata/mcp_hierarchy
-	hierarchyPath := "testdata/mcp_hierarchy"
-	if cfg.McpProxy.BaseURL != "" {
-		// Could potentially support custom hierarchy path via BaseURL or new config field
-		// For now, use default
-	}
 
 	// Load hierarchy from filesystem
 	log.Printf("Loading hierarchy from %s", hierarchyPath)
@@ -95,7 +88,7 @@ func StartHTTPServer(cfg *config.Config) error {
 	}
 
 	// Create server registry for lazy-loaded MCP clients
-	registry := hierarchy.NewServerRegistry()
+	registry := hierarchy.NewServerRegistry(cfg.McpServers)
 	defer registry.Close()
 
 	// Create ONE MCP server with 2 meta-tools

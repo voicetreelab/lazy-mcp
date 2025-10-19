@@ -13,6 +13,7 @@ var BuildVersion = "dev"
 
 func main() {
 	conf := flag.String("config", "config.json", "path to config file or a http(s) url")
+	hierarchyPath := flag.String("hierarchy", "testdata/mcp_hierarchy", "path to hierarchy directory")
 	insecure := flag.Bool("insecure", false, "allow insecure HTTPS connections by skipping TLS certificate verification")
 	expandEnv := flag.Bool("expand-env", true, "expand environment variables in config file")
 	httpHeaders := flag.String("http-headers", "", "optional HTTP headers for config URL, format: 'Key1:Value1;Key2:Value2'")
@@ -33,7 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	err = server.StartHTTPServer(cfg)
+	err = server.StartHTTPServer(cfg, *hierarchyPath)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

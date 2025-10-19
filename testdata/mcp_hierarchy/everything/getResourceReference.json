@@ -3,6 +3,7 @@
     "getResourceReference": {
       "description": "Returns a resource reference that can be used by MCP clients",
       "maps_to": "getResourceReference",
+      "server": "everything",
       "inputSchema": {
         "properties": {
           "resourceId": {

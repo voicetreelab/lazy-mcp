@@ -3,6 +3,7 @@
     "getResourceLinks": {
       "description": "Returns multiple resource links that reference different types of resources",
       "maps_to": "getResourceLinks",
+      "server": "everything",
       "inputSchema": {
         "properties": {
           "count": {

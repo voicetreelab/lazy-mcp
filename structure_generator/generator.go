@@ -437,6 +437,7 @@ func generateToolFile(tool Tool, parentDir string, serverName string) error {
 				Title:        tool.Title,
 				Description:  tool.Description,
 				MapsTo:       tool.Name, // Maps to the actual MCP tool name
+				Server:       serverName, // The MCP server that provides this tool
 				InputSchema:  tool.InputSchema,
 				OutputSchema: tool.OutputSchema,
 				Annotations:  tool.Annotations,

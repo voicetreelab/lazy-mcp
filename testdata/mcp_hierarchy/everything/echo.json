@@ -3,6 +3,7 @@
     "echo": {
       "description": "Echoes back the input",
       "maps_to": "echo",
+      "server": "everything",
       "inputSchema": {
         "properties": {
           "message": {

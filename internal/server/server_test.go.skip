@@ -40,7 +40,7 @@ func TestRecursiveProxyBasics(t *testing.T) {
 	require.NoError(t, err, "Failed to load hierarchy")
 
 	// Create server registry
-	registry := hierarchy.NewServerRegistry()
+	registry := hierarchy.NewServerRegistry(nil)
 	defer registry.Close()
 
 	// Create MCP server with meta-tools

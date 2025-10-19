@@ -144,3 +144,5 @@ fabric.properties
 /build
 /dist
 config_prod.json
+end_to_end_example/
+**.log
