@@ -3,6 +3,7 @@
     "annotatedMessage": {
       "description": "Demonstrates how annotations can be used to provide metadata about content",
       "maps_to": "annotatedMessage",
+      "server": "everything",
       "inputSchema": {
         "properties": {
           "includeImage": {

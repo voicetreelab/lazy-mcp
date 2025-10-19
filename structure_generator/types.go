@@ -39,6 +39,7 @@ type ToolDefinition struct {
 	Title        string                 `json:"title,omitempty"`
 	Description  string                 `json:"description,omitempty"`
 	MapsTo       string                 `json:"maps_to,omitempty"`        // Maps to actual MCP tool name
+	Server       string                 `json:"server"`                   // The MCP server that provides this tool (required)
 	InputSchema  map[string]interface{} `json:"inputSchema,omitempty"`
 	OutputSchema map[string]interface{} `json:"outputSchema,omitempty"`
 	Annotations  map[string]interface{} `json:"annotations,omitempty"`

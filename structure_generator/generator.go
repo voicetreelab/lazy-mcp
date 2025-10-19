@@ -153,20 +153,38 @@ func RegenerateDirectory(dirPath string, nodeName string) error {
 	totalTools := 0
 
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		childName := entry.Name()
-		childJSONPath := filepath.Join(dirPath, childName, childName+".json")
-
-		// Read the child's JSON file
-		data, err := os.ReadFile(childJSONPath)
-		if err != nil {
-			continue // Skip if file doesn't exist
-		}
-
 		var childNode ToolNode
+		var childName string
+		var data []byte
+		var err error
+
+		if entry.IsDir() {
+			// Nested structure: child is in subdirectory
+			childName = entry.Name()
+			childJSONPath := filepath.Join(dirPath, childName, childName+".json")
+
+			// Read the child's JSON file
+			data, err = os.ReadFile(childJSONPath)
+			if err != nil {
+				continue // Skip if file doesn't exist
+			}
+		} else {
+			// Flat structure: child JSON file is directly in this directory
+			// Only process .json files that aren't the current node's file
+			if !strings.HasSuffix(entry.Name(), ".json") || entry.Name() == nodeName+".json" {
+				continue
+			}
+
+			childName = strings.TrimSuffix(entry.Name(), ".json")
+			childJSONPath := filepath.Join(dirPath, entry.Name())
+
+			// Read the flat child's JSON file
+			data, err = os.ReadFile(childJSONPath)
+			if err != nil {
+				continue
+			}
+		}
+
 		if err := json.Unmarshal(data, &childNode); err != nil {
 			continue // Skip if invalid JSON
 		}
@@ -183,8 +201,8 @@ func RegenerateDirectory(dirPath string, nodeName string) error {
 				break
 			}
 			childSummaries = append(childSummaries, fmt.Sprintf("%s -> %s", childName, brief))
-		} else {
-			// Branch node - use its overview
+		} else if entry.IsDir() {
+			// Branch node - use its overview (only for directories)
 			brief := extractBriefDescription(childNode.Overview)
 			childSummaries = append(childSummaries, fmt.Sprintf("%s -> %s", childName, brief))
 			// Count tools recursively
@@ -246,37 +264,66 @@ func RegenerateDirectory(dirPath string, nodeName string) error {
 }
 
 // countTotalTools recursively counts all tools in a directory tree
+// Supports both nested (tool/tool.json) and flat (tool.json) structures
 func countTotalTools(dirPath string) int {
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
 		return 0
 	}
 
+	// Get the directory name to skip its own JSON file in flat structures
+	dirName := filepath.Base(dirPath)
+
 	total := 0
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
+		var data []byte
+		var err error
+		var jsonPath string
 
-		childPath := filepath.Join(dirPath, entry.Name())
-		childJSONPath := filepath.Join(childPath, entry.Name()+".json")
+		if entry.IsDir() {
+			// Nested structure: check subdirectory for child/child.json
+			childPath := filepath.Join(dirPath, entry.Name())
+			jsonPath = filepath.Join(childPath, entry.Name()+".json")
 
-		data, err := os.ReadFile(childJSONPath)
-		if err != nil {
-			continue
-		}
+			data, err = os.ReadFile(jsonPath)
+			if err != nil {
+				continue
+			}
 
-		var node ToolNode
-		if err := json.Unmarshal(data, &node); err != nil {
-			continue
-		}
+			var node ToolNode
+			if err := json.Unmarshal(data, &node); err != nil {
+				continue
+			}
 
-		// If this node has tools, count them (leaf node)
-		if len(node.Tools) > 0 {
-			total += len(node.Tools)
+			// If this node has tools, count them (leaf node)
+			if len(node.Tools) > 0 {
+				total += len(node.Tools)
+			} else {
+				// Otherwise, it's a branch node - recursively count tools in subdirectories
+				total += countTotalTools(childPath)
+			}
 		} else {
-			// Otherwise, it's a branch node - recursively count tools in subdirectories
-			total += countTotalTools(childPath)
+			// Flat structure: check for .json files directly in this directory
+			// Skip the parent directory's own JSON file
+			if !strings.HasSuffix(entry.Name(), ".json") || entry.Name() == dirName+".json" {
+				continue
+			}
+
+			jsonPath = filepath.Join(dirPath, entry.Name())
+			data, err = os.ReadFile(jsonPath)
+			if err != nil {
+				continue
+			}
+
+			var node ToolNode
+			if err := json.Unmarshal(data, &node); err != nil {
+				continue
+			}
+
+			// Flat structure files should be leaf nodes with tools
+			if len(node.Tools) > 0 {
+				total += len(node.Tools)
+			}
 		}
 	}
 
@@ -338,7 +385,7 @@ func generateServerStructure(server ServerTools, outputDir string) error {
 	// Create individual tool files
 	var childSummaries []string
 	for _, tool := range server.Tools {
-		// Generate tool file (leaf node)
+		// Generate tool file (leaf node) in flat structure
 		if err := generateToolFile(tool, serverDir, server.ServerName); err != nil {
 			return fmt.Errorf("failed to generate tool file for %s: %w", tool.Name, err)
 		}
@@ -374,15 +421,12 @@ func generateServerStructure(server ServerTools, outputDir string) error {
 	return writeNodeToJSON(serverNode, jsonPath)
 }
 
-// generateToolFile creates a directory and JSON file for a single tool
-// Structure: parent_dir/tool_name/tool_name.json
+// generateToolFile creates a JSON file for a single tool in flat structure
+// Structure: parent_dir/tool_name.json
 // This creates a leaf node (has tools, no overview)
 func generateToolFile(tool Tool, parentDir string, serverName string) error {
-	// Create tool directory
-	toolDir := filepath.Join(parentDir, tool.Name)
-	if err := os.MkdirAll(toolDir, 0755); err != nil {
-		return fmt.Errorf("failed to create tool directory: %w", err)
-	}
+	// Flat structure: place tool.json directly in parent directory
+	jsonPath := filepath.Join(parentDir, tool.Name+".json")
 
 	// Create ToolNode for this tool (leaf node - no overview, only tools)
 	toolNode := ToolNode{
@@ -393,6 +437,7 @@ func generateToolFile(tool Tool, parentDir string, serverName string) error {
 				Title:        tool.Title,
 				Description:  tool.Description,
 				MapsTo:       tool.Name, // Maps to the actual MCP tool name
+				Server:       serverName, // The MCP server that provides this tool
 				InputSchema:  tool.InputSchema,
 				OutputSchema: tool.OutputSchema,
 				Annotations:  tool.Annotations,
@@ -401,7 +446,6 @@ func generateToolFile(tool Tool, parentDir string, serverName string) error {
 	}
 
 	// Write tool JSON file
-	jsonPath := filepath.Join(toolDir, tool.Name+".json")
 	return writeNodeToJSON(toolNode, jsonPath)
 }
 

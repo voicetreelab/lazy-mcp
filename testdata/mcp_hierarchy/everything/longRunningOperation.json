@@ -3,6 +3,7 @@
     "longRunningOperation": {
       "description": "Demonstrates a long running operation with progress updates",
       "maps_to": "longRunningOperation",
+      "server": "everything",
       "inputSchema": {
         "properties": {
           "duration": {
