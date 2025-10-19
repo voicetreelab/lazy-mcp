@@ -76,14 +76,7 @@ func recoverMiddleware(prefix string) MiddlewareFunc {
 }
 
 // StartStdioServer starts the stdio server with the given configuration
-func StartStdioServer(cfg *config.Config) error {
-	// Determine hierarchy path - default to testdata/mcp_hierarchy
-	hierarchyPath := "testdata/mcp_hierarchy"
-	if cfg.McpProxy.BaseURL != "" {
-		// Could potentially support custom hierarchy path via BaseURL or new config field
-		// For now, use default
-	}
-
+func StartStdioServer(cfg *config.Config, hierarchyPath string) error {
 	// Load hierarchy from filesystem
 	log.Printf("Loading hierarchy from %s", hierarchyPath)
 	h, err := hierarchy.LoadHierarchy(hierarchyPath)

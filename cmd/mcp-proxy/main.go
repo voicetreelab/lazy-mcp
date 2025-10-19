@@ -48,7 +48,7 @@ func main() {
 	// Start server based on configured type
 	switch cfg.McpProxy.Type {
 	case config.MCPServerTypeStdio:
-		err = server.StartStdioServer(cfg)
+		err = server.StartStdioServer(cfg, *hierarchyPath)
 	default:
 		err = server.StartHTTPServer(cfg, *hierarchyPath)
 	}
