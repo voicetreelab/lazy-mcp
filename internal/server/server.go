@@ -76,10 +76,10 @@ func recoverMiddleware(prefix string) MiddlewareFunc {
 }
 
 // StartStdioServer starts the stdio server with the given configuration
-func StartStdioServer(cfg *config.Config, hierarchyPath string) error {
+func StartStdioServer(cfg *config.Config) error {
 	// Load hierarchy from filesystem
-	log.Printf("Loading hierarchy from %s", hierarchyPath)
-	h, err := hierarchy.LoadHierarchy(hierarchyPath)
+	log.Printf("Loading hierarchy from %s", cfg.McpProxy.HierarchyPath)
+	h, err := hierarchy.LoadHierarchy(cfg.McpProxy.HierarchyPath)
 	if err != nil {
 		return fmt.Errorf("failed to load hierarchy: %w", err)
 	}
@@ -204,13 +204,13 @@ func StartStdioServer(cfg *config.Config, hierarchyPath string) error {
 }
 
 // StartHTTPServer starts the HTTP server with the given configuration
-func StartHTTPServer(cfg *config.Config, hierarchyPath string) error {
+func StartHTTPServer(cfg *config.Config) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Load hierarchy from filesystem
-	log.Printf("Loading hierarchy from %s", hierarchyPath)
-	h, err := hierarchy.LoadHierarchy(hierarchyPath)
+	log.Printf("Loading hierarchy from %s", cfg.McpProxy.HierarchyPath)
+	h, err := hierarchy.LoadHierarchy(cfg.McpProxy.HierarchyPath)
 	if err != nil {
 		return fmt.Errorf("failed to load hierarchy: %w", err)
 	}

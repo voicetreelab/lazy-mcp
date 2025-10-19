@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/TBXark/mcp-proxy/internal/client"
 	"github.com/TBXark/mcp-proxy/internal/config"
@@ -423,12 +424,16 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 
 	log.Printf("Executing tool: hierarchy_path=%s, server=%s, tool=%s", toolPath, serverName, actualToolName)
 
+	// Create a context with 15-second timeout for tool execution
+	toolCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
 	// Call the tool on the actual MCP server
 	callRequest := mcp.CallToolRequest{}
 	callRequest.Params.Name = actualToolName
 	callRequest.Params.Arguments = arguments
 
-	result, err := client.GetClient().CallTool(ctx, callRequest)
+	result, err := client.GetClient().CallTool(toolCtx, callRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call tool %s: %w", actualToolName, err)
 	}
