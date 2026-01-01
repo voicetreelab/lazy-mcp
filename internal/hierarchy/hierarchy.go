@@ -399,6 +399,7 @@ func (h *Hierarchy) ResolveToolPath(toolPath string) (*ToolDefinition, string, e
 }
 
 // HandleExecuteTool handles the execute_tool meta-tool
+// Implements automatic retry with reconnection on transport errors
 func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegistry, toolPath string, arguments map[string]interface{}) (*mcp.CallToolResult, error) {
 	// Resolve the tool path to get tool definition and server name
 	toolDef, serverName, err := h.ResolveToolPath(toolPath)
@@ -410,35 +411,60 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 		return nil, fmt.Errorf("no MCP server configured for tool: %s", toolPath)
 	}
 
-	// Get or load the MCP client for this server
-	client, err := registry.GetOrLoadServer(ctx, serverName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get MCP client: %w", err)
-	}
-
 	// Use the mapped tool name
 	actualToolName := toolDef.MapsTo
 	if actualToolName == "" {
 		actualToolName = strings.Split(toolPath, ".")[len(strings.Split(toolPath, "."))-1]
 	}
 
-	log.Printf("Executing tool: hierarchy_path=%s, server=%s, tool=%s", toolPath, serverName, actualToolName)
+	// Try up to 2 times: first attempt, then retry with fresh connection if transport error
+	var lastErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		if attempt > 0 {
+			log.Printf("Retrying tool execution after transport error (attempt %d): %s", attempt+1, toolPath)
+		}
 
-	// Create a context with 15-second timeout for tool execution
-	toolCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
+		// Get or load the MCP client for this server
+		mcpClient, err := registry.GetOrLoadServer(ctx, serverName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get MCP client: %w", err)
+		}
 
-	// Call the tool on the actual MCP server
-	callRequest := mcp.CallToolRequest{}
-	callRequest.Params.Name = actualToolName
-	callRequest.Params.Arguments = arguments
+		log.Printf("Executing tool: hierarchy_path=%s, server=%s, tool=%s (attempt %d)", toolPath, serverName, actualToolName, attempt+1)
 
-	result, err := client.GetClient().CallTool(toolCtx, callRequest)
-	if err != nil {
+		// Create a context with 30-second timeout for tool execution
+		// Increased from 15s to allow for slower tools and retries
+		toolCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+
+		// Call the tool on the actual MCP server
+		callRequest := mcp.CallToolRequest{}
+		callRequest.Params.Name = actualToolName
+		callRequest.Params.Arguments = arguments
+
+		result, err := mcpClient.GetClient().CallTool(toolCtx, callRequest)
+		cancel() // Clean up context
+
+		if err == nil {
+			return result, nil
+		}
+
+		lastErr = err
+
+		// Check if this is a transport error (broken pipe, connection reset, etc.)
+		if isTransportError(err) {
+			log.Printf("Transport error detected for server %s: %v", serverName, err)
+			// Remove the stale client from cache so next attempt gets a fresh connection
+			registry.RemoveClient(serverName)
+			// Continue to retry
+			continue
+		}
+
+		// Non-transport error, don't retry
 		return nil, fmt.Errorf("failed to call tool %s: %w", actualToolName, err)
 	}
 
-	return result, nil
+	// All retries exhausted
+	return nil, fmt.Errorf("failed to call tool %s after retry: %w", actualToolName, lastErr)
 }
 
 // ServerRegistry manages MCP client connections
@@ -520,6 +546,19 @@ func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, serverName string)
 	return mcpClient, nil
 }
 
+// RemoveClient removes a client from the registry, allowing it to be reconnected
+// This is used when a transport error is detected to force a fresh connection
+func (r *ServerRegistry) RemoveClient(serverName string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if client, exists := r.clients[serverName]; exists {
+		log.Printf("Removing stale MCP client from cache: %s", serverName)
+		_ = client.Close()
+		delete(r.clients, serverName)
+	}
+}
+
 // Close closes all clients in the registry
 func (r *ServerRegistry) Close() {
 	r.mu.Lock()
@@ -529,4 +568,34 @@ func (r *ServerRegistry) Close() {
 		log.Printf("Closing MCP client: %s", name)
 		_ = client.Close()
 	}
+}
+
+// isTransportError checks if an error is a transport-level error indicating
+// the connection is dead (broken pipe, connection reset, EOF, etc.)
+func isTransportError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	// Common transport error patterns
+	transportErrors := []string{
+		"broken pipe",
+		"connection reset",
+		"connection refused",
+		"EOF",
+		"use of closed network connection",
+		"context deadline exceeded",
+		"i/o timeout",
+		"no such host",
+		"connection timed out",
+		"transport endpoint is not connected",
+		"write: broken pipe",
+		"read: connection reset",
+	}
+	for _, pattern := range transportErrors {
+		if strings.Contains(strings.ToLower(errStr), strings.ToLower(pattern)) {
+			return true
+		}
+	}
+	return false
 }
