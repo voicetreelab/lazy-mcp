@@ -13,6 +13,7 @@ import (
 
 	"github.com/voicetreelab/lazy-mcp/internal/client"
 	"github.com/voicetreelab/lazy-mcp/internal/config"
+	"github.com/voicetreelab/lazy-mcp/internal/metrics"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -411,7 +412,7 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 	}
 
 	// Get or load the MCP client for this server
-	client, err := registry.GetOrLoadServer(ctx, serverName)
+	mcpClient, err := registry.GetOrLoadServer(ctx, serverName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get MCP client: %w", err)
 	}
@@ -424,8 +425,11 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 
 	log.Printf("Executing tool: hierarchy_path=%s, server=%s, tool=%s", toolPath, serverName, actualToolName)
 
-	// Create a context with 15-second timeout for tool execution
-	toolCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	// Track execution time for metrics
+	startTime := time.Now()
+
+	// Create a context with 30-second timeout for tool execution
+	toolCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	// Call the tool on the actual MCP server
@@ -433,7 +437,13 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 	callRequest.Params.Name = actualToolName
 	callRequest.Params.Arguments = arguments
 
-	result, err := client.GetClient().CallTool(toolCtx, callRequest)
+	result, err := mcpClient.GetClient().CallTool(toolCtx, callRequest)
+
+	// Record metrics
+	if registry.metricsStore != nil {
+		registry.metricsStore.RecordCall(serverName, toolPath, time.Since(startTime), err)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to call tool %s: %w", actualToolName, err)
 	}
@@ -445,6 +455,7 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 type ServerRegistry struct {
 	clients       map[string]*client.Client
 	serverConfigs map[string]*config.MCPClientConfigV2
+	metricsStore  *metrics.Store
 	mu            sync.RWMutex
 }
 
@@ -454,6 +465,11 @@ func NewServerRegistry(serverConfigs map[string]*config.MCPClientConfigV2) *Serv
 		clients:       make(map[string]*client.Client),
 		serverConfigs: serverConfigs,
 	}
+}
+
+// SetMetricsStore sets the metrics store for recording tool call metrics
+func (r *ServerRegistry) SetMetricsStore(store *metrics.Store) {
+	r.metricsStore = store
 }
 
 // GetOrLoadServer gets an existing client or creates and initializes a new one
@@ -475,6 +491,9 @@ func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, serverName string)
 	if client, exists := r.clients[serverName]; exists {
 		return client, nil
 	}
+
+	// Track cold start time
+	startTime := time.Now()
 
 	// Look up the server config
 	cfg, exists := r.serverConfigs[serverName]
@@ -507,7 +526,13 @@ func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, serverName string)
 		return nil, fmt.Errorf("failed to initialize MCP client: %w", err)
 	}
 
-	log.Printf("Created and initialized MCP client for server: %s", serverName)
+	coldStartMs := time.Since(startTime).Milliseconds()
+	log.Printf("Created and initialized MCP client for server: %s (cold start: %dms)", serverName, coldStartMs)
+
+	// Record cold start metrics
+	if r.metricsStore != nil {
+		r.metricsStore.RecordServerLoad(serverName, coldStartMs)
+	}
 
 	// Store the client
 	r.clients[serverName] = mcpClient
