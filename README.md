@@ -39,8 +39,8 @@ Lazy MCP exposes two meta tools, which allows agents to explore a tree structure
    → Proxies request to Serena
    → Returns result
 ```
-![img_1.png](img_1.png)
-![img_2.png](img_2.png)
+![img_1.png](docs/images/img_1.png)
+![img_2.png](docs/images/img_2.png)
 
 ## Quick Start
 
@@ -86,19 +86,17 @@ Tool hierarchy is defined in `testdata/mcp_hierarchy/` with JSON files:
 
 When using lazy-mcp with Claude Code, all tool calls go through `execute_tool`. This means traditional MCP permission rules (like `mcp__github__create_issue`) don't apply directly.
 
-To control which tools require permission prompts, use **Claude Code hooks**.
+To control which tools require permission prompts, use one of the following methods:
 
-### Option 1: Claude Code Native Hook (Recommended for Claude Code)
+### Option 1: Claude Code Native Hook (Claude Code Only)
 
-Claude Code's `PreToolUse` hooks can inspect the `tool_path` argument and decide permission by outputting JSON:
-- **Allow:** Exit 0 (no output)
-- **Ask:** Exit 0 with `{"hookSpecificOutput": {"permissionDecision": "ask", ...}}`
-- **Deny:** Exit 0 with `{"hookSpecificOutput": {"permissionDecision": "deny", ...}}`
+Claude Code's `PreToolUse` hooks can inspect the `tool_path` argument and decide permission by outputting JSON. This feature is specific to Claude Code and **does not work with OpenCode**.
 
 #### Setup
 
 1. **Copy the example hook script:**
    ```bash
+   mkdir -p ~/.claude/hooks
    cp examples/hooks/check-sensitive-tools.sh ~/.claude/hooks/
    chmod +x ~/.claude/hooks/check-sensitive-tools.sh
    ```
@@ -131,7 +129,7 @@ Claude Code's `PreToolUse` hooks can inspect the `tool_path` argument and decide
    export LAZY_MCP_DENIED_TOOLS="*.force_delete_*"
    ```
 
-### Option 2: Token-Based Hook (Recommended for OpenCode / General Use)
+### Option 2: Universal Token-Based Hook (For Manual Config / Other Agents)
 
 Since not all agents support the `permissionDecision` JSON protocol, `lazy-mcp` also supports a universal "Token Hook" mechanism. This forces the agent to retry the operation after user confirmation.
 
@@ -145,19 +143,38 @@ Since not all agents support the `permissionDecision` JSON protocol, `lazy-mcp` 
 
 1. **Copy the token hook script:**
    ```bash
-   cp examples/hooks/confirm-tool-token.sh /path/to/hooks/
-   chmod +x /path/to/hooks/confirm-tool-token.sh
+   # Example: Copy to project directory
+   mkdir -p .opencode/plugin
+   cp examples/hooks/confirm-tool-token.sh .opencode/plugin/
+   chmod +x .opencode/plugin/confirm-tool-token.sh
    ```
 
-2. **Configure your agent** to call this script *before* `execute_tool`.
+2. **Configure lazy-mcp** to use this hook in your `config.json` (or `config-agentic.json`):
+   ```json
+   "permissions": {
+     "sensitive": ["gmail.send_email", "github.create_issue"],
+     "confirmationHook": ".opencode/plugin/confirm-tool-token.sh"
+   }
+   ```
 
-### Option 3: OpenCode Plugin
+### Option 3: OpenCode Native Plugin (Logging Only)
 
-For OpenCode users, a TypeScript plugin is available that logs warnings for sensitive actions.
+OpenCode uses a TypeScript plugin system to intercept tool calls. **Note:** Currently, the OpenCode plugin API does not support triggering interactive "Yes/No" permission dialogs from within a plugin. Therefore, this plugin **only logs warnings** to the console for sensitive tools. It does *not* block execution or ask for permission.
 
-```bash
-cp examples/plugins/opencode-sensitive-tools.ts .opencode/plugin/sensitive-tools-check.ts
-```
+For actual permission blocking/control in OpenCode, you **MUST** use **Option 2** (Token-Based Hook).
+
+#### Setup
+
+1. **Install the plugin:**
+   ```bash
+   # Create plugin directory if it doesn't exist
+   mkdir -p .opencode/plugin
+   
+   # Copy the plugin
+   cp examples/plugins/opencode-sensitive-tools.ts .opencode/plugin/sensitive-tools.ts
+   ```
+
+2. **Restart OpenCode:** The plugin will automatically load. It will log "⚠️ SENSITIVE ACTION" warnings to the console when `execute_tool` is called with sensitive arguments, but execution will proceed.
 
 ### Default Sensitive Tools
 

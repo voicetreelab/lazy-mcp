@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-TOKEN_DIR="/tmp/lazy-mcp-tokens"
+TOKEN_DIR="/home/b-codes/agentic.ai.forge/.opencode/tmp/lazy-mcp-tokens"
 TOKEN_MAX_AGE=60  # seconds
 
 # Ensure token directory exists
