@@ -1,0 +1,36 @@
+{
+  "tools": {
+    "list_issues": {
+      "title": "List Issues",
+      "description": "List issues in a repository",
+      "maps_to": "list_issues",
+      "inputSchema": {
+        "properties": {
+          "owner": {
+            "description": "Repository owner",
+            "type": "string"
+          },
+          "repo": {
+            "description": "Repository name",
+            "type": "string"
+          },
+          "state": {
+            "default": "open",
+            "description": "Issue state filter",
+            "enum": [
+              "open",
+              "closed",
+              "all"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

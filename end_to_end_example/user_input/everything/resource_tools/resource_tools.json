@@ -1,0 +1,3 @@
+{
+  "overview": "resource_tools: 3 tools; getResourceReference -\u003e Returns references to MCP resources for testing resource linking, getTinyImage -\u003e Returns a small test image for testing binary content handling, listRoots -\u003e Displays MCP roots information showing available root contexts"
+}

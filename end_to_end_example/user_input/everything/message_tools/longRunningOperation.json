@@ -1,0 +1,24 @@
+{
+  "tools": {
+    "longRunningOperation": {
+      "title": "Long Running Operation",
+      "description": "Demonstrates progress notifications for operations that take time to complete",
+      "maps_to": "longRunningOperation",
+      "inputSchema": {
+        "properties": {
+          "duration": {
+            "default": 10,
+            "description": "Duration of the operation in seconds",
+            "type": "number"
+          },
+          "steps": {
+            "default": 5,
+            "description": "Number of progress steps to report",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+}

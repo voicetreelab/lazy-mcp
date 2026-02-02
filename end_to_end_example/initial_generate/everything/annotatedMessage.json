@@ -1,0 +1,25 @@
+{
+  "tools": {
+    "annotatedMessage": {
+      "title": "Annotated Message",
+      "description": "Demonstrates content annotations with structured metadata",
+      "maps_to": "annotatedMessage",
+      "inputSchema": {
+        "properties": {
+          "annotations": {
+            "description": "Metadata annotations to attach",
+            "type": "object"
+          },
+          "message": {
+            "description": "Message to annotate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

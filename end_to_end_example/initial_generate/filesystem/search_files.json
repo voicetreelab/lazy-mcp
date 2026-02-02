@@ -1,0 +1,32 @@
+{
+  "tools": {
+    "search_files": {
+      "description": "Recursively search for files and directories matching a pattern. Searches through all subdirectories from the starting path. The search is case-insensitive and matches partial names. Returns full paths to all matching items. Great for finding files when you don't know their exact location. Only searches within allowed directories.",
+      "maps_to": "search_files",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "excludePatterns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "path": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "pattern"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

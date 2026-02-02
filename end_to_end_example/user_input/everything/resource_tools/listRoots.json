@@ -1,0 +1,13 @@
+{
+  "tools": {
+    "listRoots": {
+      "title": "List Roots",
+      "description": "Displays MCP roots information showing available root contexts",
+      "maps_to": "listRoots",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      }
+    }
+  }
+}

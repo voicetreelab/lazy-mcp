@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "list_directory_with_sizes": {
+      "description": "Get a detailed listing of all files and directories in a specified path, including sizes. Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes. This tool is useful for understanding directory structure and finding specific files within a directory. Only works within allowed directories.",
+      "maps_to": "list_directory_with_sizes",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sortBy": {
+            "default": "name",
+            "description": "Sort entries by name or size",
+            "enum": [
+              "name",
+              "size"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "tools": {
+    "echo": {
+      "title": "Echo",
+      "description": "Echoes back the input message. Useful for testing basic tool calling functionality.",
+      "maps_to": "echo",
+      "inputSchema": {
+        "properties": {
+          "message": {
+            "description": "The message to echo back",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

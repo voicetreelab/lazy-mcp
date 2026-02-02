@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "structuredContent": {
+      "title": "Structured Content",
+      "description": "Returns structured data in various formats to test content type handling",
+      "maps_to": "structuredContent",
+      "inputSchema": {
+        "properties": {
+          "format": {
+            "default": "json",
+            "description": "Format of the structured content",
+            "enum": [
+              "json",
+              "xml",
+              "yaml",
+              "markdown"
+            ],
+            "type": "string"
+          },
+          "nested": {
+            "default": false,
+            "description": "Whether to include nested structures",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "tools": {
+    "edit": {
+      "title": "Edit Code",
+      "description": "Edit code files with AI assistance and semantic understanding",
+      "maps_to": "edit",
+      "inputSchema": {
+        "properties": {
+          "changes": {
+            "description": "Description of changes to make",
+            "type": "string"
+          },
+          "file": {
+            "description": "The file path to edit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "changes"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

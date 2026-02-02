@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "create_repository": {
+      "title": "Create Repository",
+      "description": "Create a new GitHub repository in your account or organization",
+      "maps_to": "create_repository",
+      "inputSchema": {
+        "properties": {
+          "description": {
+            "description": "Repository description",
+            "type": "string"
+          },
+          "name": {
+            "description": "Repository name",
+            "type": "string"
+          },
+          "private": {
+            "default": false,
+            "description": "Whether the repository should be private",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

@@ -1,0 +1,3 @@
+{
+  "overview": "message_tools: 5 tools; annotatedMessage -\u003e Demonstrates content annotations with structured metadata, longRunningOperation -\u003e Demonstrates progress notifications for operations that take time to complete, sampleLLM -\u003e Tests LLM sampling capabilities by requesting completion from the connected model, startElicitation -\u003e Initiates an interactive elicitation flow to gather information from the user, structuredContent -\u003e Returns structured data in various formats to test content type handling"
+}
