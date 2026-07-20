@@ -69,6 +69,11 @@ type OptionsV2 struct {
 	RecursiveLazyLoad optional.Field[bool] `json:"recursiveLazyLoad,omitempty"`
 	AuthTokens        []string             `json:"authTokens,omitempty"`
 	ToolFilter        *ToolFilterConfig    `json:"toolFilter,omitempty"`
+
+	// Observability options
+	MetricsEnabled   optional.Field[bool] `json:"metricsEnabled,omitempty"`   // Enable metrics collection (default: true)
+	MetricsRetention string               `json:"metricsRetention,omitempty"` // Retention period: "1h", "8h", "24h", "7d" (default: "8h")
+	MetricsFile      string               `json:"metricsFile,omitempty"`      // Persistence file path (default: "" = in-memory only)
 }
 
 type MCPProxyConfigV2 struct {

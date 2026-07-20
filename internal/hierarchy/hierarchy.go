@@ -14,6 +14,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/voicetreelab/lazy-mcp/internal/client"
 	"github.com/voicetreelab/lazy-mcp/internal/config"
+	"github.com/voicetreelab/lazy-mcp/internal/metrics"
 )
 
 // HierarchyNode represents a node in the tool hierarchy
@@ -399,6 +400,8 @@ func (h *Hierarchy) ResolveToolPath(toolPath string) (*ToolDefinition, string, e
 }
 
 // HandleExecuteTool handles the execute_tool meta-tool
+// Implements automatic retry with reconnection on transport errors (broken pipe, connection reset, etc.)
+// Note: Timeout errors (context deadline exceeded) do NOT trigger retry to avoid duplicate operations.
 func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegistry, toolPath string, arguments map[string]interface{}) (*mcp.CallToolResult, error) {
 	// Resolve the tool path to get tool definition and server name
 	toolDef, serverName, err := h.ResolveToolPath(toolPath)
@@ -410,42 +413,87 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 		return nil, fmt.Errorf("no MCP server configured for tool: %s", toolPath)
 	}
 
-	// Get or load the MCP client for this server
-	client, err := registry.GetOrLoadServer(ctx, serverName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get MCP client: %w", err)
-	}
-
 	// Use the mapped tool name
 	actualToolName := toolDef.MapsTo
 	if actualToolName == "" {
 		actualToolName = strings.Split(toolPath, ".")[len(strings.Split(toolPath, "."))-1]
 	}
 
-	log.Printf("Executing tool: hierarchy_path=%s, server=%s, tool=%s", toolPath, serverName, actualToolName)
+	// Retry config: max 2 attempts (initial + 1 retry) for transport errors only
+	const maxAttempts = 2
+	var lastErr error
 
-	// Create a context with 30-second timeout for tool execution
-	// (increased from 15s to account for queuing time when serializing requests)
-	// Note: We create the timeout BEFORE acquiring the lock to enforce a total deadline
-	// for the operation. If we waited for the lock first, a client could hang indefinitely.
-	toolCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if attempt > 0 {
+			log.Printf("Retrying tool execution after transport error (attempt %d/%d): %s", attempt+1, maxAttempts, toolPath)
+		}
 
-	// Serialize tool calls to the same server to prevent concurrent stdio access.
-	// Stdio is a single-channel transport that cannot handle interleaved messages.
-	// See: https://github.com/voicetreelab/lazy-mcp/issues/8
-	mutex := registry.GetClientMutex(serverName)
-	mutex.Lock()
-	defer mutex.Unlock()
+		// Get or load the MCP client for this server (inside loop for fresh connection on retry)
+		mcpClient, err := registry.GetOrLoadServer(ctx, serverName)
+		if err != nil {
+			// GetOrLoadServer failure is not retryable (config issue, not transport)
+			return nil, fmt.Errorf("failed to get MCP client: %w", err)
+		}
 
-	// Call the tool on the actual MCP server
-	callRequest := mcp.CallToolRequest{}
-	callRequest.Params.Name = actualToolName
-	callRequest.Params.Arguments = arguments
+		log.Printf("Executing tool: hierarchy_path=%s, server=%s, tool=%s (attempt %d/%d)", toolPath, serverName, actualToolName, attempt+1, maxAttempts)
 
-	result, err := client.GetClient().CallTool(toolCtx, callRequest)
-	if err != nil {
-		// Include inputSchema in error message to help LLMs self-correct parameter mistakes
+		// Per-attempt timeout for tool execution (does not include retry time)
+		// Note: We create the timeout BEFORE acquiring the lock to enforce a total deadline
+		// for the operation. If we waited for the lock first, a client could hang indefinitely.
+		toolCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+
+		// Serialize tool calls to the same server to prevent concurrent stdio access.
+		// Stdio is a single-channel transport that cannot handle interleaved messages.
+		// See: https://github.com/voicetreelab/lazy-mcp/issues/8
+		mutex := registry.GetClientMutex(serverName)
+		mutex.Lock()
+
+		// Track execution time for metrics
+		startTime := time.Now()
+
+		// Call the tool on the actual MCP server
+		callRequest := mcp.CallToolRequest{}
+		callRequest.Params.Name = actualToolName
+		callRequest.Params.Arguments = arguments
+
+		result, err := mcpClient.GetClient().CallTool(toolCtx, callRequest)
+		duration := time.Since(startTime)
+		cancel() // Clean up context
+		mutex.Unlock()
+
+		// Record metrics for this attempt
+		if registry.metricsStore != nil {
+			registry.metricsStore.RecordCall(serverName, toolPath, duration, err)
+		}
+
+		if err == nil {
+			// Success - check if result has IsError set, append schema to help LLMs self-correct
+			if result != nil && result.IsError && toolDef.InputSchema != nil && len(result.Content) > 0 {
+				schemaJSON, marshalErr := json.MarshalIndent(toolDef.InputSchema, "", "  ")
+				if marshalErr == nil {
+					// Append schema to the first text content item
+					// Note: TextContent is a value type, so we modify the copy and assign it back to the slice
+					if textContent, ok := result.Content[0].(mcp.TextContent); ok {
+						textContent.Text += fmt.Sprintf("\n\nExpected inputSchema:\n%s", string(schemaJSON))
+						result.Content[0] = textContent
+					}
+				}
+			}
+			return result, nil
+		}
+
+		lastErr = err
+
+		// Check if this is a transport error (broken pipe, connection reset, etc.)
+		if isTransportError(err) {
+			log.Printf("Transport error detected for server %s: %v", serverName, err)
+			// Remove the stale client from cache so next attempt gets a fresh connection
+			registry.RemoveClient(serverName)
+			// Continue to retry
+			continue
+		}
+
+		// Non-transport error, don't retry - include inputSchema in error message
 		if toolDef.InputSchema != nil {
 			schemaJSON, marshalErr := json.MarshalIndent(toolDef.InputSchema, "", "  ")
 			if marshalErr == nil {
@@ -455,19 +503,14 @@ func (h *Hierarchy) HandleExecuteTool(ctx context.Context, registry *ServerRegis
 		return nil, fmt.Errorf("failed to call tool %s: %w", actualToolName, err)
 	}
 
-	// Check if result has IsError set - append schema to help LLMs self-correct
-	if result != nil && result.IsError && toolDef.InputSchema != nil && len(result.Content) > 0 {
+	// All retries exhausted
+	if toolDef.InputSchema != nil {
 		schemaJSON, marshalErr := json.MarshalIndent(toolDef.InputSchema, "", "  ")
 		if marshalErr == nil {
-			// Append schema to the first text content item
-			// Note: TextContent is a value type, so we modify the copy and assign it back to the slice
-			if textContent, ok := result.Content[0].(mcp.TextContent); ok {
-				textContent.Text += fmt.Sprintf("\n\nExpected inputSchema:\n%s", string(schemaJSON))
-				result.Content[0] = textContent
-			}
+			return nil, fmt.Errorf("failed to call tool %s after retry: %w\n\nExpected inputSchema:\n%s", actualToolName, lastErr, string(schemaJSON))
 		}
 	}
-	return result, nil
+	return nil, fmt.Errorf("failed to call tool %s after retry: %w", actualToolName, lastErr)
 }
 
 // ServerRegistry manages MCP client connections
@@ -475,7 +518,11 @@ type ServerRegistry struct {
 	clients       map[string]*client.Client
 	clientMutex   map[string]*sync.Mutex // Per-client mutex for serializing tool calls
 	serverConfigs map[string]*config.MCPClientConfigV2
+	metricsStore  *metrics.Store
 	mu            sync.RWMutex
+	// createClient optionally overrides client.NewMCPClient. Intended for tests
+	// that inject mock transports; nil means use the production constructor.
+	createClient func(name string, conf *config.MCPClientConfigV2) (*client.Client, error)
 }
 
 // NewServerRegistry creates a new server registry with server configurations
@@ -504,6 +551,11 @@ func (r *ServerRegistry) GetClientMutex(serverName string) *sync.Mutex {
 	return m
 }
 
+// SetMetricsStore sets the metrics store for recording tool call metrics
+func (r *ServerRegistry) SetMetricsStore(store *metrics.Store) {
+	r.metricsStore = store
+}
+
 // GetOrLoadServer gets an existing client or creates and initializes a new one
 // This implements lazy loading - servers are only started when first accessed
 func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, serverName string) (*client.Client, error) {
@@ -530,8 +582,14 @@ func (r *ServerRegistry) GetOrLoadServer(ctx context.Context, serverName string)
 		return nil, fmt.Errorf("server config not found: %s", serverName)
 	}
 
-	// Create the MCP client
-	mcpClient, err := client.NewMCPClient(serverName, cfg)
+	// Create the MCP client (tests may override via createClient)
+	var mcpClient *client.Client
+	var err error
+	if r.createClient != nil {
+		mcpClient, err = r.createClient(serverName, cfg)
+	} else {
+		mcpClient, err = client.NewMCPClient(serverName, cfg)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MCP client: %w", err)
 	}
@@ -581,4 +639,52 @@ func (r *ServerRegistry) Close() {
 	// Clear the clients and mutex maps
 	r.clients = make(map[string]*client.Client)
 	r.clientMutex = make(map[string]*sync.Mutex)
+}
+
+// RemoveClient removes a client from the registry, allowing it to be reconnected.
+// This is used when a transport error is detected to force a fresh connection.
+//
+// Race condition note: If another goroutine is using this client while RemoveClient
+// is called, the client will be closed mid-operation. This is safe because:
+// 1. The operation will fail with "use of closed network connection"
+// 2. This error is classified as a transport error, triggering a retry
+// 3. The retry will get a fresh connection via GetOrLoadServer
+func (r *ServerRegistry) RemoveClient(serverName string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if client, exists := r.clients[serverName]; exists {
+		log.Printf("Removing stale MCP client from cache: %s", serverName)
+		_ = client.Close()
+		delete(r.clients, serverName)
+	}
+}
+
+// isTransportError checks if an error is a transport-level error indicating
+// the connection is dead (broken pipe, connection reset, EOF, etc.)
+// Note: "context deadline exceeded" is NOT considered a transport error because:
+// 1. The server may still be processing the request (risk of duplicate operations)
+// 2. Retrying a slow operation won't help if the server is overloaded
+func isTransportError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := strings.ToLower(err.Error())
+	// Transport error patterns indicating dead connection
+	// Note: "broken pipe" matches "write: broken pipe", "connection reset" matches "read: connection reset"
+	transportErrors := []string{
+		"broken pipe",
+		"connection reset",
+		"connection refused",
+		"eof",
+		"use of closed network connection",
+		"no such host",
+		"transport endpoint is not connected",
+	}
+	for _, pattern := range transportErrors {
+		if strings.Contains(errStr, pattern) {
+			return true
+		}
+	}
+	return false
 }

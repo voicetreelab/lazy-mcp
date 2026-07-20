@@ -15,6 +15,7 @@ import (
 
 	"github.com/voicetreelab/lazy-mcp/internal/config"
 	"github.com/voicetreelab/lazy-mcp/internal/hierarchy"
+	"github.com/voicetreelab/lazy-mcp/internal/metrics"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -87,6 +88,32 @@ func StartStdioServer(cfg *config.Config) error {
 	// Create server registry for lazy-loaded MCP clients
 	registry := hierarchy.NewServerRegistry(cfg.McpServers)
 	defer registry.Close()
+
+	// Initialize metrics store if enabled (default: true)
+	var metricsStore *metrics.Store
+	metricsEnabled := true
+	if cfg.McpProxy.Options != nil && cfg.McpProxy.Options.MetricsEnabled.Present() {
+		metricsEnabled = cfg.McpProxy.Options.MetricsEnabled.OrElse(true)
+	}
+	if metricsEnabled {
+		retention := 8 * time.Hour // default
+		if cfg.McpProxy.Options != nil && cfg.McpProxy.Options.MetricsRetention != "" {
+			if parsed, err := metrics.ParseDuration(cfg.McpProxy.Options.MetricsRetention); err == nil {
+				retention = parsed
+			}
+		}
+		persistPath := ""
+		if cfg.McpProxy.Options != nil {
+			persistPath = cfg.McpProxy.Options.MetricsFile
+		}
+		metricsStore = metrics.InitGlobalStore(retention, persistPath)
+		// Ensure metrics goroutine is stopped on shutdown
+		defer metricsStore.Stop()
+		log.Printf("Metrics store initialized (retention=%s, persist=%v)", retention, persistPath != "")
+	}
+
+	// Set metrics store on registry for instrumentation
+	registry.SetMetricsStore(metricsStore)
 
 	// Create ONE MCP server with 2 meta-tools
 	serverOpts := []server.ServerOption{
@@ -197,6 +224,91 @@ func StartStdioServer(cfg *config.Config) error {
 
 		return h.HandleExecuteTool(ctx, registry, toolPath, arguments)
 	})
+
+	// Register proxy_doctor tool (observability)
+	if metricsStore != nil {
+		proxyDoctorTool := mcp.Tool{
+			Name:        "proxy_doctor",
+			Description: "Run diagnostics on the MCP proxy. Checks server health, identifies slow tools, timeout patterns, and suggests fixes. Use when experiencing issues with MCP tools.",
+			InputSchema: mcp.ToolInputSchema{
+				Type:       "object",
+				Properties: map[string]interface{}{},
+			},
+		}
+
+		// Get expected server names from config
+		expectedServers := make([]string, 0, len(cfg.McpServers))
+		for name := range cfg.McpServers {
+			expectedServers = append(expectedServers, name)
+		}
+
+		mcpServer.AddTool(proxyDoctorTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			result := metrics.RunDoctor(metricsStore, expectedServers)
+
+			jsonBytes, err := json.MarshalIndent(result, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.NewTextContent(string(jsonBytes)),
+				},
+			}, nil
+		})
+
+		// Register get_proxy_metrics tool
+		getProxyMetricsTool := mcp.Tool{
+			Name:        "get_proxy_metrics",
+			Description: "Get detailed performance metrics for the MCP proxy. Use to diagnose slow tools, timeouts, or errors. Returns latency percentiles (p50/p95/p99), error rates, and recent errors.",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: map[string]interface{}{
+					"server": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by server name (optional). Omit to get metrics for all servers.",
+					},
+					"since": map[string]interface{}{
+						"type":        "string",
+						"description": "Time window: '1h', '24h', '7d' (default: '1h')",
+					},
+				},
+			},
+		}
+
+		mcpServer.AddTool(getProxyMetricsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			serverFilter := ""
+			since := time.Hour // default
+
+			if request.Params.Arguments != nil {
+				if argsMap, ok := request.Params.Arguments.(map[string]interface{}); ok {
+					if serverVal, ok := argsMap["server"].(string); ok {
+						serverFilter = serverVal
+					}
+					if sinceVal, ok := argsMap["since"].(string); ok {
+						if parsed, err := metrics.ParseDuration(sinceVal); err == nil {
+							since = parsed
+						}
+					}
+				}
+			}
+
+			result := metricsStore.GetMetrics(serverFilter, since)
+
+			jsonBytes, err := json.MarshalIndent(result, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.NewTextContent(string(jsonBytes)),
+				},
+			}, nil
+		})
+
+		log.Printf("Registered observability tools: proxy_doctor, get_proxy_metrics")
+	}
 
 	// Serve via stdio
 	log.Printf("Starting hierarchical MCP proxy (stdio server)")
